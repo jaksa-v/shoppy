@@ -31,8 +31,8 @@ export default defineSchema({
 		householdId: v.id('households'),
 		name: v.string(),
 		categoryId: v.optional(v.id('categories')),
-		quantity: v.optional(v.number()),
-		unit: v.optional(v.string()),
+		quantity: v.optional(v.string()),
+		notes: v.optional(v.string()),
 		completed: v.boolean()
 	}).index('by_listId', ['listId'])
 });
