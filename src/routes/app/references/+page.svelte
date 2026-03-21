@@ -25,14 +25,8 @@
 		mutationLoading = true;
 		mutationResult = null;
 		try {
-			const id = await client.mutation(api.authed.conferences.create, {
-				name: `Test Conf ${Date.now()}`,
-				location: 'Localhost',
-				startDate: Date.now(),
-				endDate: Date.now() + 86400000,
-				description: 'Created from references page'
-			});
-			mutationResult = `Created conference: ${id}`;
+			const household = await client.mutation(api.authed.households.getOrCreate, {});
+			mutationResult = `Got/created household: ${household?._id}`;
 		} catch (err) {
 			mutationResult = `Error: ${err instanceof Error ? err.message : String(err)}`;
 		} finally {

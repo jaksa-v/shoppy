@@ -2,11 +2,37 @@ import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
 export default defineSchema({
-	conferences: defineTable({
+	households: defineTable({
 		name: v.string(),
-		location: v.string(),
-		startDate: v.number(),
-		endDate: v.number(),
-		description: v.optional(v.string())
+		ownerId: v.string()
+	}),
+	householdMembers: defineTable({
+		householdId: v.id('households'),
+		userId: v.string(),
+		role: v.union(v.literal('owner'), v.literal('member'))
 	})
+		.index('by_userId', ['userId'])
+		.index('by_householdId', ['householdId']),
+	categories: defineTable({
+		householdId: v.id('households'),
+		name: v.string(),
+		slug: v.string(),
+		color: v.string(),
+		order: v.number(),
+		isSystem: v.boolean()
+	}).index('by_householdId', ['householdId']),
+	groceryLists: defineTable({
+		householdId: v.id('households'),
+		name: v.string(),
+		isActive: v.boolean()
+	}).index('by_householdId', ['householdId']),
+	groceryItems: defineTable({
+		listId: v.id('groceryLists'),
+		householdId: v.id('households'),
+		name: v.string(),
+		categoryId: v.optional(v.id('categories')),
+		quantity: v.optional(v.number()),
+		unit: v.optional(v.string()),
+		completed: v.boolean()
+	}).index('by_listId', ['listId'])
 });
