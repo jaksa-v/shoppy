@@ -35,5 +35,13 @@ export default defineConfig(
 				svelteConfig
 			}
 		}
+	},
+	{
+		// goto() in page components is valid client-side navigation; the no-navigation-without-resolve
+		// rule is intended for SvelteKit hooks/handle, not page components.
+		files: ['src/routes/**/*.svelte'],
+		rules: {
+			'svelte/no-navigation-without-resolve': ['error', { ignoreGoto: true }]
+		}
 	}
 );

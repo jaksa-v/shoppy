@@ -10,6 +10,7 @@
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { page } from '$app/state';
 
 	const clerkContext = getClerkContext();
 	const client = useConvexClient();
@@ -34,6 +35,12 @@
 	let editCategoryId = $state<Id<'categories'> | undefined>(undefined);
 	let editPending = $state(false);
 
+	// Members / invite dialog state
+	let membersOpen = $state(false);
+	let inviteLink = $state('');
+	let invitePending = $state(false);
+	let inviteCopied = $state(false);
+
 	onMount(async () => {
 		if (!clerkContext.clerk.user) return;
 		bootstrapping = true;
@@ -56,6 +63,12 @@
 
 	const categoriesQuery = useQuery(api.authed.categories.list, () =>
 		householdId ? { householdId } : 'skip'
+	);
+
+	const membersQuery = useQuery(api.authed.invites.listMembers, () => (householdId ? {} : 'skip'));
+
+	const activeInvitesQuery = useQuery(api.authed.invites.listForHousehold, () =>
+		householdId ? {} : 'skip'
 	);
 
 	// Sort categories by order
@@ -159,6 +172,32 @@
 		}
 	}
 
+	async function handleCreateInvite() {
+		invitePending = true;
+		inviteLink = '';
+		try {
+			const invite = await client.mutation(api.authed.invites.create, {});
+			if (invite) {
+				const origin = page.url.origin;
+				inviteLink = `${origin}/app/invite/${invite.code}`;
+			}
+		} finally {
+			invitePending = false;
+		}
+	}
+
+	async function handleCopyInvite() {
+		if (!inviteLink) return;
+		await navigator.clipboard.writeText(inviteLink);
+		inviteCopied = true;
+		setTimeout(() => (inviteCopied = false), 2000);
+	}
+
+	async function handleRevokeInvite(inviteId: Id<'invites'>) {
+		await client.mutation(api.authed.invites.revoke, { inviteId });
+		inviteLink = '';
+	}
+
 	const isLoading = $derived(
 		bootstrapping || (!!householdId && !activeListQuery.data && activeListQuery.data !== null)
 	);
@@ -178,11 +217,39 @@
 		<header class="border-b bg-card">
 			<div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
 				<h1 class="text-lg font-semibold tracking-tight">🛒 Shoppy</h1>
-				<div
-					{@attach (el) => {
-						clerkContext.clerk.mountUserButton(el);
-					}}
-				></div>
+				<div class="flex items-center gap-3">
+					{#if householdId}
+						<Button
+							variant="ghost"
+							size="sm"
+							class="gap-1.5 text-muted-foreground"
+							onclick={() => (membersOpen = true)}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="15"
+								height="15"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+								<circle cx="9" cy="7" r="4" />
+								<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+								<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+							</svg>
+							{(membersQuery.data ?? []).length}
+						</Button>
+					{/if}
+					<div
+						{@attach (el) => {
+							clerkContext.clerk.mountUserButton(el);
+						}}
+					></div>
+				</div>
 			</div>
 		</header>
 
@@ -427,7 +494,8 @@
 			<Dialog.Header>
 				<Dialog.Title>Clear checked items?</Dialog.Title>
 				<Dialog.Description>
-					This will permanently remove all {boughtItems.length} checked item{boughtItems.length === 1
+					This will permanently remove all {boughtItems.length} checked item{boughtItems.length ===
+					1
 						? ''
 						: 's'} from the list. Active items will not be affected.
 				</Dialog.Description>
@@ -439,6 +507,94 @@
 				<Button variant="destructive" onclick={handleClearBought} disabled={clearPending}>
 					{clearPending ? 'Clearing…' : 'Clear all'}
 				</Button>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
+
+	<!-- Members & invite dialog -->
+	<Dialog.Root
+		bind:open={membersOpen}
+		onOpenChange={(open) => {
+			if (!open) inviteLink = '';
+		}}
+	>
+		<Dialog.Content class="sm:max-w-md">
+			<Dialog.Header>
+				<Dialog.Title>Household members</Dialog.Title>
+				<Dialog.Description>Manage who has access to your shared grocery list.</Dialog.Description>
+			</Dialog.Header>
+
+			<!-- Members list -->
+			<div class="space-y-2 py-1">
+				{#each membersQuery.data ?? [] as member (member._id)}
+					<div class="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
+						<div class="flex items-center gap-2">
+							<div
+								class="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+							>
+								{member.role === 'owner' ? '★' : '•'}
+							</div>
+							<span class="text-sm">
+								{member.userId === clerkContext.clerk.user?.id ? 'You' : 'Partner'}
+							</span>
+						</div>
+						<span class="text-xs text-muted-foreground capitalize">{member.role}</span>
+					</div>
+				{/each}
+			</div>
+
+			<!-- Invite section (only show if sole member or no partner yet) -->
+			{#if (membersQuery.data ?? []).length < 2}
+				<div class="mt-2 space-y-3 border-t pt-4">
+					<p class="text-sm text-muted-foreground">
+						Invite your partner to join this household and share the grocery list.
+					</p>
+
+					{#if !inviteLink && (activeInvitesQuery.data ?? []).length === 0}
+						<Button onclick={handleCreateInvite} disabled={invitePending} class="w-full">
+							{invitePending ? 'Generating…' : 'Generate invite link'}
+						</Button>
+					{:else}
+						{@const existingInvite = (activeInvitesQuery.data ?? [])[0]}
+						{#if !inviteLink && existingInvite}
+							{@const origin = page.url.origin}
+							{@const link = `${origin}/app/invite/${existingInvite.code}`}
+							<div class="flex gap-2">
+								<Input value={link} readonly class="flex-1 font-mono text-xs" />
+								<Button
+									variant="outline"
+									size="sm"
+									onclick={async () => {
+										await navigator.clipboard.writeText(link);
+										inviteCopied = true;
+										setTimeout(() => (inviteCopied = false), 2000);
+									}}
+								>
+									{inviteCopied ? 'Copied!' : 'Copy'}
+								</Button>
+							</div>
+							<Button
+								variant="ghost"
+								size="sm"
+								class="w-full text-muted-foreground"
+								onclick={() => handleRevokeInvite(existingInvite._id)}
+							>
+								Revoke invite
+							</Button>
+						{:else if inviteLink}
+							<div class="flex gap-2">
+								<Input value={inviteLink} readonly class="flex-1 font-mono text-xs" />
+								<Button variant="outline" size="sm" onclick={handleCopyInvite}>
+									{inviteCopied ? 'Copied!' : 'Copy'}
+								</Button>
+							</div>
+						{/if}
+					{/if}
+				</div>
+			{/if}
+
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (membersOpen = false)}>Close</Button>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>

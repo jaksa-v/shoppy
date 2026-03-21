@@ -14,6 +14,7 @@ import type * as authed_groceryItems from "../authed/groceryItems.js";
 import type * as authed_groceryLists from "../authed/groceryLists.js";
 import type * as authed_helpers from "../authed/helpers.js";
 import type * as authed_households from "../authed/households.js";
+import type * as authed_invites from "../authed/invites.js";
 import type * as private_demo from "../private/demo.js";
 import type * as private_helpers from "../private/helpers.js";
 
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   "authed/groceryLists": typeof authed_groceryLists;
   "authed/helpers": typeof authed_helpers;
   "authed/households": typeof authed_households;
+  "authed/invites": typeof authed_invites;
   "private/demo": typeof private_demo;
   "private/helpers": typeof private_helpers;
 }>;

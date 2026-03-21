@@ -34,5 +34,15 @@ export default defineSchema({
 		quantity: v.optional(v.string()),
 		notes: v.optional(v.string()),
 		completed: v.boolean()
-	}).index('by_listId', ['listId'])
+	}).index('by_listId', ['listId']),
+	invites: defineTable({
+		householdId: v.id('households'),
+		code: v.string(),
+		createdBy: v.string(),
+		expiresAt: v.number(),
+		usedBy: v.optional(v.string()),
+		usedAt: v.optional(v.number())
+	})
+		.index('by_code', ['code'])
+		.index('by_householdId', ['householdId'])
 });
