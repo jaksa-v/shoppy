@@ -100,3 +100,23 @@ export const toggleBought = authedMutation({
 		await ctx.db.patch(args.id, { completed: !item.completed });
 	}
 });
+
+export const clearBought = authedMutation({
+	args: { listId: v.id('groceryLists') },
+	handler: async (ctx, args) => {
+		const list = await ctx.db.get(args.listId);
+		if (!list) throw new Error('Not found');
+
+		await assertHouseholdMember(ctx, list.householdId);
+
+		const boughtItems = await ctx.db
+			.query('groceryItems')
+			.withIndex('by_listId', (q) => q.eq('listId', args.listId))
+			.filter((q) => q.eq(q.field('completed'), true))
+			.collect();
+
+		await Promise.all(boughtItems.map((item) => ctx.db.delete(item._id)));
+
+		return boughtItems.length;
+	}
+});

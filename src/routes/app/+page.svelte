@@ -21,6 +21,10 @@
 	let quickAddName = $state('');
 	let quickAddPending = $state(false);
 
+	// Clear bought state
+	let clearPending = $state(false);
+	let clearConfirmOpen = $state(false);
+
 	// Edit dialog state
 	let editOpen = $state(false);
 	let editId = $state<Id<'groceryItems'> | null>(null);
@@ -114,6 +118,19 @@
 
 	async function handleDelete(id: Id<'groceryItems'>) {
 		await client.mutation(api.authed.groceryItems.remove, { id });
+	}
+
+	async function handleClearBought() {
+		if (!activeListQuery.data) return;
+		clearPending = true;
+		try {
+			await client.mutation(api.authed.groceryItems.clearBought, {
+				listId: activeListQuery.data._id
+			});
+			clearConfirmOpen = false;
+		} finally {
+			clearPending = false;
+		}
 	}
 
 	function openEdit(item: NonNullable<typeof itemsQuery.data>[0]) {
@@ -316,9 +333,20 @@
 				<!-- Bought items section -->
 				{#if boughtItems.length > 0}
 					<div class="mt-8">
-						<h2 class="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-							Checked ({boughtItems.length})
-						</h2>
+						<div class="mb-3 flex items-center justify-between">
+							<h2 class="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+								Checked ({boughtItems.length})
+							</h2>
+							<Button
+								variant="ghost"
+								size="sm"
+								class="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+								onclick={() => (clearConfirmOpen = true)}
+								disabled={clearPending}
+							>
+								Clear all
+							</Button>
+						</div>
 						<ul class="space-y-1.5">
 							{#each boughtItems as item (item._id)}
 								<li
@@ -392,6 +420,28 @@
 			{/if}
 		</main>
 	</div>
+
+	<!-- Clear bought confirmation dialog -->
+	<Dialog.Root bind:open={clearConfirmOpen}>
+		<Dialog.Content class="sm:max-w-sm">
+			<Dialog.Header>
+				<Dialog.Title>Clear checked items?</Dialog.Title>
+				<Dialog.Description>
+					This will permanently remove all {boughtItems.length} checked item{boughtItems.length === 1
+						? ''
+						: 's'} from the list. Active items will not be affected.
+				</Dialog.Description>
+			</Dialog.Header>
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (clearConfirmOpen = false)} disabled={clearPending}
+					>Cancel</Button
+				>
+				<Button variant="destructive" onclick={handleClearBought} disabled={clearPending}>
+					{clearPending ? 'Clearing…' : 'Clear all'}
+				</Button>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
 
 	<!-- Edit dialog -->
 	<Dialog.Root bind:open={editOpen}>
