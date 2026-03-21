@@ -1,12 +1,20 @@
 <script lang="ts">
 	import { remoteDemoQuery } from '$lib/remote/demo.remote';
+	import { Button } from '$lib/components/ui/button/index.js';
 
 	const stuff = await remoteDemoQuery();
 
 	$inspect(stuff);
 </script>
 
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
-
-<a href="/app">App</a>
+<div class="flex min-h-screen flex-col items-center justify-center bg-background p-6">
+	<div class="max-w-md space-y-6 text-center">
+		<h1 class="text-4xl font-bold tracking-tight text-foreground">Welcome to SvelteKit</h1>
+		<p class="text-muted-foreground">
+			Visit <a href="https://svelte.dev/docs/kit" class="font-medium text-primary hover:underline"
+				>svelte.dev/docs/kit</a
+			> to read the documentation
+		</p>
+		<Button href="/app" size="lg">Get Started</Button>
+	</div>
+</div>

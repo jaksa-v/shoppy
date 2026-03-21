@@ -3,13 +3,22 @@
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '../../convex/_generated/api';
 	import type { Id } from '../../convex/_generated/dataModel';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Textarea } from '$lib/components/ui/textarea/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { HugeiconsIcon } from '@hugeicons/svelte';
+	import { PencilEdit01Icon, Delete01Icon } from '@hugeicons/core-free-icons';
 
 	const clerkContext = getClerkContext();
 	const client = useConvexClient();
 
 	const conferencesQuery = useQuery(api.authed.conferences.list, {});
 
-	let showForm = $state(false);
+	let dialogOpen = $state(false);
 	let editingId = $state<Id<'conferences'> | null>(null);
 
 	let name = $state('');
@@ -25,7 +34,7 @@
 		endDate = '';
 		description = '';
 		editingId = null;
-		showForm = false;
+		dialogOpen = false;
 	}
 
 	async function handleSubmit(e: Event) {
@@ -61,7 +70,7 @@
 		startDate = new Date(conf.startDate).toISOString().split('T')[0];
 		endDate = new Date(conf.endDate).toISOString().split('T')[0];
 		description = conf.description ?? '';
-		showForm = true;
+		dialogOpen = true;
 	}
 
 	async function handleDelete(id: Id<'conferences'>) {
@@ -76,16 +85,29 @@
 		});
 	}
 
-	function conferenceStatus(start: number, end: number) {
+	function conferenceStatus(start: number, end: number): 'upcoming' | 'active' | 'past' {
 		const now = Date.now();
 		if (now < start) return 'upcoming';
 		if (now > end) return 'past';
 		return 'active';
 	}
+
+	function getStatusVariant(
+		status: 'upcoming' | 'active' | 'past'
+	): 'default' | 'secondary' | 'destructive' | 'outline' {
+		switch (status) {
+			case 'active':
+				return 'default';
+			case 'upcoming':
+				return 'secondary';
+			case 'past':
+				return 'outline';
+		}
+	}
 </script>
 
 {#if !clerkContext.clerk.user}
-	<div class="flex min-h-screen items-center justify-center bg-stone-50">
+	<div class="flex min-h-screen items-center justify-center bg-background">
 		<div
 			{@attach (el) => {
 				clerkContext.clerk.mountSignIn(el, {});
@@ -93,26 +115,71 @@
 		></div>
 	</div>
 {:else}
-	<div class="min-h-screen bg-stone-50 font-sans text-stone-900">
-		<header class="border-b border-stone-200 bg-white">
+	<div class="min-h-screen bg-background">
+		<header class="border-b bg-card">
 			<div class="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
 				<h1 class="text-lg font-semibold tracking-tight">Conferences</h1>
 				<div class="flex items-center gap-3">
-					<a
-						href="/app/references"
-						class="rounded-md px-3 py-1.5 text-sm font-medium text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-700"
-					>
-						References
-					</a>
-					<button
-						onclick={() => {
-							resetForm();
-							showForm = !showForm;
-						}}
-						class="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-stone-800"
-					>
-						{showForm ? 'Cancel' : '+ New'}
-					</button>
+					<Button variant="ghost" href="/app/references">References</Button>
+					<Dialog.Root bind:open={dialogOpen}>
+						<Dialog.Trigger>
+							{#snippet child({ props })}
+								<Button
+									onclick={() => {
+										resetForm();
+									}}
+									{...props}
+								>
+									{dialogOpen ? 'Cancel' : '+ New'}
+								</Button>
+							{/snippet}
+						</Dialog.Trigger>
+						<Dialog.Content>
+							<Dialog.Header>
+								<Dialog.Title>{editingId ? 'Edit Conference' : 'New Conference'}</Dialog.Title>
+							</Dialog.Header>
+							<form onsubmit={handleSubmit} class="space-y-4">
+								<div class="space-y-2">
+									<Label for="name">Name</Label>
+									<Input id="name" bind:value={name} placeholder="React Conf 2026" required />
+								</div>
+								<div class="space-y-2">
+									<Label for="location">Location</Label>
+									<Input
+										id="location"
+										bind:value={location}
+										placeholder="San Francisco, CA"
+										required
+									/>
+								</div>
+								<div class="grid grid-cols-2 gap-4">
+									<div class="space-y-2">
+										<Label for="startDate">Start Date</Label>
+										<Input id="startDate" type="date" bind:value={startDate} required />
+									</div>
+									<div class="space-y-2">
+										<Label for="endDate">End Date</Label>
+										<Input id="endDate" type="date" bind:value={endDate} required />
+									</div>
+								</div>
+								<div class="space-y-2">
+									<Label for="description"
+										>Description <span class="text-muted-foreground">(optional)</span></Label
+									>
+									<Textarea
+										id="description"
+										bind:value={description}
+										placeholder="Brief description..."
+										rows={2}
+									/>
+								</div>
+								<Dialog.Footer>
+									<Button type="button" variant="ghost" onclick={resetForm}>Cancel</Button>
+									<Button type="submit">{editingId ? 'Update' : 'Add'}</Button>
+								</Dialog.Footer>
+							</form>
+						</Dialog.Content>
+					</Dialog.Root>
 					<div
 						{@attach (el) => {
 							clerkContext.clerk.mountUserButton(el);
@@ -123,183 +190,69 @@
 		</header>
 
 		<main class="mx-auto max-w-3xl px-6 py-8">
-			{#if showForm}
-				<form onsubmit={handleSubmit} class="mb-8 rounded-lg border border-stone-200 bg-white p-5">
-					<h2 class="mb-4 text-sm font-semibold tracking-wide text-stone-500 uppercase">
-						{editingId ? 'Edit Conference' : 'New Conference'}
-					</h2>
-
-					<div class="grid gap-4 sm:grid-cols-2">
-						<div class="sm:col-span-2">
-							<label for="name" class="mb-1 block text-sm font-medium text-stone-700">Name</label>
-							<input
-								id="name"
-								bind:value={name}
-								required
-								class="w-full rounded-md border border-stone-300 px-3 py-2 text-sm transition-colors focus:border-stone-500 focus:outline-none"
-								placeholder="React Conf 2026"
-							/>
-						</div>
-						<div class="sm:col-span-2">
-							<label for="location" class="mb-1 block text-sm font-medium text-stone-700"
-								>Location</label
-							>
-							<input
-								id="location"
-								bind:value={location}
-								required
-								class="w-full rounded-md border border-stone-300 px-3 py-2 text-sm transition-colors focus:border-stone-500 focus:outline-none"
-								placeholder="San Francisco, CA"
-							/>
-						</div>
-						<div>
-							<label for="startDate" class="mb-1 block text-sm font-medium text-stone-700"
-								>Start Date</label
-							>
-							<input
-								id="startDate"
-								type="date"
-								bind:value={startDate}
-								required
-								class="w-full rounded-md border border-stone-300 px-3 py-2 text-sm transition-colors focus:border-stone-500 focus:outline-none"
-							/>
-						</div>
-						<div>
-							<label for="endDate" class="mb-1 block text-sm font-medium text-stone-700"
-								>End Date</label
-							>
-							<input
-								id="endDate"
-								type="date"
-								bind:value={endDate}
-								required
-								class="w-full rounded-md border border-stone-300 px-3 py-2 text-sm transition-colors focus:border-stone-500 focus:outline-none"
-							/>
-						</div>
-						<div class="sm:col-span-2">
-							<label for="description" class="mb-1 block text-sm font-medium text-stone-700"
-								>Description <span class="text-stone-400">(optional)</span></label
-							>
-							<textarea
-								id="description"
-								bind:value={description}
-								rows={2}
-								class="w-full rounded-md border border-stone-300 px-3 py-2 text-sm transition-colors focus:border-stone-500 focus:outline-none"
-								placeholder="Brief description..."
-							></textarea>
-						</div>
-					</div>
-
-					<div class="mt-4 flex justify-end gap-2">
-						<button
-							type="button"
-							onclick={resetForm}
-							class="rounded-md px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100"
-						>
-							Cancel
-						</button>
-						<button
-							type="submit"
-							class="rounded-md bg-stone-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-stone-800"
-						>
-							{editingId ? 'Update' : 'Add'}
-						</button>
-					</div>
-				</form>
-			{/if}
-
 			{#if !conferencesQuery.data}
-				<p class="text-sm text-stone-400">Loading...</p>
+				<p class="text-sm text-muted-foreground">Loading...</p>
 			{:else if conferencesQuery.data.length === 0}
-				<div class="py-20 text-center">
-					<p class="text-stone-400">No conferences yet.</p>
-					<button
-						onclick={() => (showForm = true)}
-						class="mt-2 text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4 transition-colors hover:text-stone-900"
-					>
-						Add your first one
-					</button>
-				</div>
+				<Card.Root class="py-20 text-center">
+					<Card.Content>
+						<p class="text-muted-foreground">No conferences yet.</p>
+						<Button
+							variant="link"
+							onclick={() => {
+								resetForm();
+								dialogOpen = true;
+							}}
+							class="mt-2"
+						>
+							Add your first one
+						</Button>
+					</Card.Content>
+				</Card.Root>
 			{:else}
-				<ul class="space-y-3">
+				<div class="space-y-4">
 					{#each conferencesQuery.data as conf (conf._id)}
 						{@const status = conferenceStatus(conf.startDate, conf.endDate)}
-						<li
-							class="group rounded-lg border border-stone-200 bg-white p-4 transition-shadow hover:shadow-sm"
-						>
-							<div class="flex items-start justify-between gap-4">
-								<div class="min-w-0 flex-1">
-									<div class="flex items-center gap-2">
-										<h3 class="truncate text-sm font-semibold">{conf.name}</h3>
-										<span
-											class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium {status ===
-											'active'
-												? 'bg-emerald-100 text-emerald-700'
-												: status === 'upcoming'
-													? 'bg-blue-100 text-blue-700'
-													: 'bg-stone-100 text-stone-500'}"
-										>
-											{status}
-										</span>
+						<Card.Root class="group transition-shadow hover:shadow-sm">
+							<Card.Content class="pt-6">
+								<div class="flex items-start justify-between gap-4">
+									<div class="min-w-0 flex-1">
+										<div class="flex items-center gap-2">
+											<h3 class="truncate text-sm font-semibold">{conf.name}</h3>
+											<Badge variant={getStatusVariant(status)}>{status}</Badge>
+										</div>
+										<p class="mt-1 text-sm text-muted-foreground">
+											{conf.location} · {formatDate(conf.startDate)} – {formatDate(conf.endDate)}
+										</p>
+										{#if conf.description}
+											<p class="mt-1.5 text-sm text-muted-foreground">{conf.description}</p>
+										{/if}
 									</div>
-									<p class="mt-1 text-sm text-stone-500">
-										{conf.location} &middot; {formatDate(conf.startDate)} &ndash; {formatDate(
-											conf.endDate
-										)}
-									</p>
-									{#if conf.description}
-										<p class="mt-1.5 text-sm text-stone-400">{conf.description}</p>
-									{/if}
-								</div>
-								<div
-									class="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100"
-								>
-									<button
-										onclick={() => startEdit(conf)}
-										class="rounded-md p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
-										aria-label="Edit {conf.name}"
+									<div
+										class="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100"
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="14"
-											height="14"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
+										<Button
+											variant="ghost"
+											size="icon-sm"
+											onclick={() => startEdit(conf)}
+											aria-label="Edit {conf.name}"
 										>
-											<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-											<path d="m15 5 4 4" />
-										</svg>
-									</button>
-									<button
-										onclick={() => handleDelete(conf._id)}
-										class="rounded-md p-1.5 text-stone-400 transition-colors hover:bg-red-50 hover:text-red-500"
-										aria-label="Delete {conf.name}"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="14"
-											height="14"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
+											<HugeiconsIcon icon={PencilEdit01Icon} class="size-4" />
+										</Button>
+										<Button
+											variant="ghost"
+											size="icon-sm"
+											onclick={() => handleDelete(conf._id)}
+											class="hover:bg-destructive/10 hover:text-destructive"
+											aria-label="Delete {conf.name}"
 										>
-											<path d="M3 6h18" />
-											<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-											<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-										</svg>
-									</button>
+											<HugeiconsIcon icon={Delete01Icon} class="size-4" />
+										</Button>
+									</div>
 								</div>
-							</div>
-						</li>
+							</Card.Content>
+						</Card.Root>
 					{/each}
-				</ul>
+				</div>
 			{/if}
 		</main>
 	</div>

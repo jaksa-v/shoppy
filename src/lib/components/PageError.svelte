@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { isHttpError } from '@sveltejs/kit';
+	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert/index.js';
+	import { HugeiconsIcon } from '@hugeicons/svelte';
+	import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 
 	const { error }: { error: unknown } = $props();
 
@@ -18,11 +21,14 @@
 	});
 </script>
 
-<div>
-	<h1>{parsedError.message}</h1>
-	<p>{parsedError.kind}</p>
-	<p>{parsedError.timestamp}</p>
-	{#if parsedError.traceId}
-		<p>send to support if you see this: {parsedError.traceId}</p>
-	{/if}
-</div>
+<Alert variant="destructive">
+	<HugeiconsIcon icon={AlertCircleIcon} class="size-4" />
+	<AlertTitle>{parsedError.message}</AlertTitle>
+	<AlertDescription>
+		<span class="font-medium">{parsedError.kind}</span>
+		<span class="text-muted-foreground">• {new Date(parsedError.timestamp).toLocaleString()}</span>
+		{#if parsedError.traceId}
+			<p class="mt-1 text-xs">send to support if you see this: {parsedError.traceId}</p>
+		{/if}
+	</AlertDescription>
+</Alert>
