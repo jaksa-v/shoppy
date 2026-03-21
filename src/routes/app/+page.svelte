@@ -191,7 +191,14 @@
 
 		<main class="mx-auto max-w-3xl px-6 py-8">
 			{#if !conferencesQuery.data}
-				<p class="text-sm text-muted-foreground">Loading...</p>
+				<div class="flex items-center justify-center py-20">
+					<div class="flex items-center gap-2 text-muted-foreground">
+						<div
+							class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+						></div>
+						<span class="text-sm">Loading conferences</span>
+					</div>
+				</div>
 			{:else if conferencesQuery.data.length === 0}
 				<Card.Root class="py-20 text-center">
 					<Card.Content>

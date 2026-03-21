@@ -76,7 +76,14 @@
 			<Card.Content>
 				<div class="rounded-md bg-muted p-3">
 					{#if authedDemo.isLoading}
-						<p class="text-sm text-muted-foreground">Loading...</p>
+						<div class="flex items-center justify-center py-4">
+							<div class="flex items-center gap-2 text-muted-foreground">
+								<div
+									class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+								></div>
+								<span class="text-sm">Loading</span>
+							</div>
+						</div>
 					{:else if authedDemo.data}
 						<pre class="text-sm text-foreground">{JSON.stringify(authedDemo.data, null, 2)}</pre>
 					{:else}
@@ -179,7 +186,14 @@
 						{@const result = await remoteDemoQuery()}
 						<pre class="text-sm text-foreground">{JSON.stringify(result, null, 2)}</pre>
 						{#snippet pending()}
-							<p class="text-sm text-muted-foreground">Loading from server...</p>
+							<div class="flex items-center justify-center py-4">
+								<div class="flex items-center gap-2 text-muted-foreground">
+									<div
+										class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+									></div>
+									<span class="text-sm">Loading from server</span>
+								</div>
+							</div>
 						{/snippet}
 						{#snippet failed(error, reset)}
 							<div class="space-y-2">
@@ -245,7 +259,14 @@
 						{@const result = await remoteAuthedDemoQuery()}
 						<pre class="text-sm text-foreground">{JSON.stringify(result, null, 2)}</pre>
 						{#snippet pending()}
-							<p class="text-sm text-muted-foreground">Validating auth on server...</p>
+							<div class="flex items-center justify-center py-4">
+								<div class="flex items-center gap-2 text-muted-foreground">
+									<div
+										class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+									></div>
+									<span class="text-sm">Validating auth on server</span>
+								</div>
+							</div>
 						{/snippet}
 						{#snippet failed(error, reset)}
 							<div class="space-y-2">
