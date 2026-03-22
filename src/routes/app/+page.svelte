@@ -447,9 +447,11 @@
 											<!-- Checkbox -->
 											<button
 												onclick={() => handleToggleBought(item._id)}
-												class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-muted-foreground/40 transition-colors hover:border-primary"
+												class="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center"
 												aria-label="Mark as bought"
-											></button>
+											>
+												<span class="h-5 w-5 rounded-full border-2 border-muted-foreground/40 transition-colors hover:border-primary"></span>
+											</button>
 
 											<!-- Content -->
 											<div class="min-w-0 flex-1">
@@ -472,7 +474,7 @@
 											>
 												<button
 													onclick={() => openEdit(item)}
-													class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+													class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
 													aria-label="Edit item"
 												>
 													<svg
@@ -492,7 +494,7 @@
 												</button>
 												<button
 													onclick={() => handleDelete(item._id)}
-													class="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+													class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
 													aria-label="Delete item"
 												>
 													<svg
@@ -547,22 +549,24 @@
 									<!-- Checkbox (checked) -->
 									<button
 										onclick={() => handleToggleBought(item._id)}
-										class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-primary text-primary-foreground transition-colors hover:bg-primary/80"
+										class="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center"
 										aria-label="Mark as not bought"
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="10"
-											height="10"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="3"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-										>
-											<polyline points="20 6 9 17 4 12" />
-										</svg>
+										<span class="flex h-5 w-5 items-center justify-center rounded-full border-2 border-primary bg-primary text-primary-foreground transition-colors hover:bg-primary/80">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												width="10"
+												height="10"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="3"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											>
+												<polyline points="20 6 9 17 4 12" />
+											</svg>
+										</span>
 									</button>
 
 									<!-- Content -->
@@ -583,7 +587,7 @@
 									<!-- Delete -->
 									<button
 										onclick={() => handleDelete(item._id)}
-										class="flex shrink-0 rounded p-1 text-muted-foreground sm:opacity-0 sm:group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+										class="flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded text-muted-foreground sm:opacity-0 sm:group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
 										aria-label="Delete item"
 									>
 										<svg
@@ -798,13 +802,17 @@
 									<button
 										type="button"
 										onclick={() => (editingCategoryColor = color)}
-										class="h-6 w-6 rounded-full border-2 transition-all {editingCategoryColor ===
-										color
-											? 'scale-110 border-foreground'
-											: 'border-transparent'}"
-										style="background-color: {color}"
+										class="flex min-h-[36px] min-w-[36px] items-center justify-center"
 										aria-label="Select color {color}"
-									></button>
+									>
+										<span
+											class="h-6 w-6 rounded-full border-2 transition-all {editingCategoryColor ===
+											color
+												? 'scale-110 border-foreground'
+												: 'border-transparent'}"
+											style="background-color: {color}"
+										></span>
+									</button>
 								{/each}
 							</div>
 							<div class="flex gap-2">
@@ -836,7 +844,7 @@
 							<button
 								onclick={() => handleMoveCategory(cat._id, 'up')}
 								disabled={i === 0}
-								class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
 								aria-label="Move up"
 							>
 								<svg
@@ -854,7 +862,7 @@
 							<button
 								onclick={() => handleMoveCategory(cat._id, 'down')}
 								disabled={i === manageableCategories.length - 1}
-								class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
 								aria-label="Move down"
 							>
 								<svg
@@ -872,7 +880,7 @@
 							<!-- Edit button -->
 							<button
 								onclick={() => openEditCategory(cat)}
-								class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
 								aria-label="Edit category"
 							>
 								<svg
@@ -894,7 +902,7 @@
 							<button
 								onclick={() => handleDeleteCategory(cat._id)}
 								disabled={deletingCategoryId === cat._id}
-								class="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
 								aria-label="Delete category"
 							>
 								<svg
@@ -943,12 +951,16 @@
 						<button
 							type="button"
 							onclick={() => (newCategoryColor = color)}
-							class="h-6 w-6 rounded-full border-2 transition-all {newCategoryColor === color
-								? 'scale-110 border-foreground'
-								: 'border-transparent'}"
-							style="background-color: {color}"
+							class="flex min-h-[36px] min-w-[36px] items-center justify-center"
 							aria-label="Select color {color}"
-						></button>
+						>
+							<span
+								class="h-6 w-6 rounded-full border-2 transition-all {newCategoryColor === color
+									? 'scale-110 border-foreground'
+									: 'border-transparent'}"
+								style="background-color: {color}"
+							></span>
+						</button>
 					{/each}
 				</div>
 				<div class="flex items-center gap-2 text-xs text-muted-foreground">
