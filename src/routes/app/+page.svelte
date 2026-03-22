@@ -10,6 +10,7 @@
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import { page } from '$app/state';
 
 	const clerkContext = getClerkContext();
@@ -745,16 +746,26 @@
 				</div>
 				<div class="space-y-1.5">
 					<Label for="edit-category">Category</Label>
-					<select
-						id="edit-category"
-						bind:value={editCategoryId}
-						class="flex h-9 w-full items-center rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+					<Select.Root
+						value={editCategoryId ?? ''}
+						onValueChange={(v) => {
+							editCategoryId = v === '' ? undefined : (v as Id<'categories'>);
+						}}
 					>
-						<option value={undefined}>Uncategorized</option>
-						{#each sortedCategories as cat (cat._id)}
-							<option value={cat._id}>{cat.name}</option>
-						{/each}
-					</select>
+						<Select.Trigger id="edit-category">
+							{#if editCategoryId}
+								{sortedCategories.find((c) => c._id === editCategoryId)?.name ?? 'Uncategorized'}
+							{:else}
+								Uncategorized
+							{/if}
+						</Select.Trigger>
+						<Select.Content>
+							<Select.Item value="">Uncategorized</Select.Item>
+							{#each sortedCategories as cat (cat._id)}
+								<Select.Item value={cat._id}>{cat.name}</Select.Item>
+							{/each}
+						</Select.Content>
+					</Select.Root>
 				</div>
 				<div class="space-y-1.5">
 					<Label for="edit-notes">Notes</Label>
