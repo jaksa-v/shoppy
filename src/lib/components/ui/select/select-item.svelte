@@ -26,7 +26,5 @@
 	)}
 	{...restProps}
 >
-	{#snippet children()}
-		{@render itemLabel?.()}
-	{/snippet}
+	{@render itemLabel?.()}
 </SelectPrimitive.Item>

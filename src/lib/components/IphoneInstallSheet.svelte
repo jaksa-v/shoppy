@@ -19,12 +19,12 @@
 
 {#if open}
 	<!-- Backdrop -->
-	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-	<div
+	<button
+		type="button"
 		class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
 		onclick={close}
-		aria-hidden="true"
-	></div>
+		aria-label="Close install sheet"
+	></button>
 
 	<!-- Bottom sheet -->
 	<div

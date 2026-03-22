@@ -1,40 +1,17 @@
-import type { GenericMutationCtx, GenericQueryCtx } from 'convex/server';
 import { v } from 'convex/values';
-import type { DataModel } from '../_generated/dataModel';
+import {
+	getHouseholdCategories,
+	getNextUserCategoryOrder,
+	requireEditableCategory,
+	toCategorySlug
+} from './domain/categories';
+import { requireHouseholdMembership } from './domain/households';
 import { authedMutation, authedQuery } from './helpers';
-
-async function assertHouseholdMember(
-	ctx: (GenericQueryCtx<DataModel> | GenericMutationCtx<DataModel>) & {
-		identity: { subject: string };
-	},
-	householdId: string
-) {
-	const userId = ctx.identity.subject;
-	const membership = await ctx.db
-		.query('householdMembers')
-		.withIndex('by_userId', (q) => q.eq('userId', userId))
-		.filter((q) => q.eq(q.field('householdId'), householdId))
-		.first();
-	if (!membership) throw new Error('Forbidden');
-	return membership;
-}
-
-function toSlug(name: string): string {
-	return name
-		.toLowerCase()
-		.replace(/\s+/g, '-')
-		.replace(/[^a-z0-9-]/g, '');
-}
 
 export const list = authedQuery({
 	args: { householdId: v.id('households') },
 	handler: async (ctx, args) => {
-		await assertHouseholdMember(ctx, args.householdId);
-
-		return await ctx.db
-			.query('categories')
-			.withIndex('by_householdId', (q) => q.eq('householdId', args.householdId))
-			.collect();
+		return await getHouseholdCategories(ctx, args.householdId);
 	}
 });
 
@@ -45,24 +22,15 @@ export const create = authedMutation({
 		color: v.string()
 	},
 	handler: async (ctx, args) => {
-		await assertHouseholdMember(ctx, args.householdId);
-
-		const existing = await ctx.db
-			.query('categories')
-			.withIndex('by_householdId', (q) => q.eq('householdId', args.householdId))
-			.collect();
-
-		// Insert before the system "Uncategorized" category (order 99)
-		const maxUserOrder = existing
-			.filter((c) => !c.isSystem)
-			.reduce((max, c) => Math.max(max, c.order), -1);
+		await requireHouseholdMembership(ctx, args.householdId);
+		const existing = await getHouseholdCategories(ctx, args.householdId);
 
 		return await ctx.db.insert('categories', {
 			householdId: args.householdId,
 			name: args.name.trim(),
-			slug: toSlug(args.name.trim()),
+			slug: toCategorySlug(args.name.trim()),
 			color: args.color,
-			order: maxUserOrder + 1,
+			order: getNextUserCategoryOrder(existing),
 			isSystem: false
 		});
 	}
@@ -74,14 +42,10 @@ export const rename = authedMutation({
 		name: v.string()
 	},
 	handler: async (ctx, args) => {
-		const category = await ctx.db.get(args.id);
-		if (!category) throw new Error('Not found');
-		if (category.isSystem) throw new Error('Cannot rename system category');
-
-		await assertHouseholdMember(ctx, category.householdId);
+		const category = await requireEditableCategory(ctx, args.id);
 
 		const trimmed = args.name.trim();
-		await ctx.db.patch(args.id, { name: trimmed, slug: toSlug(trimmed) });
+		await ctx.db.patch(category._id, { name: trimmed, slug: toCategorySlug(trimmed) });
 	}
 });
 
@@ -91,13 +55,8 @@ export const updateColor = authedMutation({
 		color: v.string()
 	},
 	handler: async (ctx, args) => {
-		const category = await ctx.db.get(args.id);
-		if (!category) throw new Error('Not found');
-		if (category.isSystem) throw new Error('Cannot update system category');
-
-		await assertHouseholdMember(ctx, category.householdId);
-
-		await ctx.db.patch(args.id, { color: args.color });
+		const category = await requireEditableCategory(ctx, args.id);
+		await ctx.db.patch(category._id, { color: args.color });
 	}
 });
 
@@ -107,7 +66,7 @@ export const reorder = authedMutation({
 		orderedIds: v.array(v.id('categories'))
 	},
 	handler: async (ctx, args) => {
-		await assertHouseholdMember(ctx, args.householdId);
+		await requireHouseholdMembership(ctx, args.householdId);
 
 		await Promise.all(args.orderedIds.map((id, index) => ctx.db.patch(id, { order: index })));
 	}
@@ -116,11 +75,7 @@ export const reorder = authedMutation({
 export const remove = authedMutation({
 	args: { id: v.id('categories') },
 	handler: async (ctx, args) => {
-		const category = await ctx.db.get(args.id);
-		if (!category) throw new Error('Not found');
-		if (category.isSystem) throw new Error('Cannot delete system category');
-
-		await assertHouseholdMember(ctx, category.householdId);
+		const category = await requireEditableCategory(ctx, args.id);
 
 		// Move all items in this category to uncategorized (categoryId = undefined)
 		const lists = await ctx.db

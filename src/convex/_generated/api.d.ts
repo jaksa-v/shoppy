@@ -10,6 +10,9 @@
 
 import type * as authed_categories from "../authed/categories.js";
 import type * as authed_demo from "../authed/demo.js";
+import type * as authed_domain_categories from "../authed/domain/categories.js";
+import type * as authed_domain_households from "../authed/domain/households.js";
+import type * as authed_domain_invites from "../authed/domain/invites.js";
 import type * as authed_groceryItems from "../authed/groceryItems.js";
 import type * as authed_groceryLists from "../authed/groceryLists.js";
 import type * as authed_helpers from "../authed/helpers.js";
@@ -27,6 +30,9 @@ import type {
 declare const fullApi: ApiFromModules<{
   "authed/categories": typeof authed_categories;
   "authed/demo": typeof authed_demo;
+  "authed/domain/categories": typeof authed_domain_categories;
+  "authed/domain/households": typeof authed_domain_households;
+  "authed/domain/invites": typeof authed_domain_invites;
   "authed/groceryItems": typeof authed_groceryItems;
   "authed/groceryLists": typeof authed_groceryLists;
   "authed/helpers": typeof authed_helpers;

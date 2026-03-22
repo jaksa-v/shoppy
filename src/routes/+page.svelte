@@ -1,8 +1,5 @@
 <script lang="ts">
-	import { remoteDemoQuery } from '$lib/remote/demo.remote';
 	import { Button } from '$lib/components/ui/button/index.js';
-
-	const stuff = await remoteDemoQuery();
 </script>
 
 <div class="flex min-h-screen flex-col items-center justify-center bg-background p-6">

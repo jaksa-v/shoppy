@@ -1,23 +1,6 @@
-import type { GenericMutationCtx, GenericQueryCtx } from 'convex/server';
 import { v } from 'convex/values';
-import type { DataModel } from '../_generated/dataModel';
+import { requireHouseholdMembership } from './domain/households';
 import { authedMutation, authedQuery } from './helpers';
-
-async function assertHouseholdMember(
-	ctx: (GenericQueryCtx<DataModel> | GenericMutationCtx<DataModel>) & {
-		identity: { subject: string };
-	},
-	householdId: string
-) {
-	const userId = ctx.identity.subject;
-	const membership = await ctx.db
-		.query('householdMembers')
-		.withIndex('by_userId', (q) => q.eq('userId', userId))
-		.filter((q) => q.eq(q.field('householdId'), householdId))
-		.first();
-	if (!membership) throw new Error('Forbidden');
-	return membership;
-}
 
 export const list = authedQuery({
 	args: { listId: v.id('groceryLists') },
@@ -25,7 +8,7 @@ export const list = authedQuery({
 		const list = await ctx.db.get(args.listId);
 		if (!list) throw new Error('Not found');
 
-		await assertHouseholdMember(ctx, list.householdId);
+		await requireHouseholdMembership(ctx, list.householdId);
 
 		return await ctx.db
 			.query('groceryItems')
@@ -44,7 +27,7 @@ export const create = authedMutation({
 		notes: v.optional(v.string())
 	},
 	handler: async (ctx, args) => {
-		await assertHouseholdMember(ctx, args.householdId);
+		await requireHouseholdMembership(ctx, args.householdId);
 
 		return await ctx.db.insert('groceryItems', {
 			listId: args.listId,
@@ -70,7 +53,7 @@ export const update = authedMutation({
 		const item = await ctx.db.get(args.id);
 		if (!item) throw new Error('Not found');
 
-		await assertHouseholdMember(ctx, item.householdId);
+		await requireHouseholdMembership(ctx, item.householdId);
 
 		const { id, ...patch } = args;
 		await ctx.db.patch(id, patch);
@@ -83,7 +66,7 @@ export const remove = authedMutation({
 		const item = await ctx.db.get(args.id);
 		if (!item) throw new Error('Not found');
 
-		await assertHouseholdMember(ctx, item.householdId);
+		await requireHouseholdMembership(ctx, item.householdId);
 
 		await ctx.db.delete(args.id);
 	}
@@ -95,7 +78,7 @@ export const toggleBought = authedMutation({
 		const item = await ctx.db.get(args.id);
 		if (!item) throw new Error('Not found');
 
-		await assertHouseholdMember(ctx, item.householdId);
+		await requireHouseholdMembership(ctx, item.householdId);
 
 		await ctx.db.patch(args.id, { completed: !item.completed });
 	}
@@ -107,7 +90,7 @@ export const clearBought = authedMutation({
 		const list = await ctx.db.get(args.listId);
 		if (!list) throw new Error('Not found');
 
-		await assertHouseholdMember(ctx, list.householdId);
+		await requireHouseholdMembership(ctx, list.householdId);
 
 		const boughtItems = await ctx.db
 			.query('groceryItems')
