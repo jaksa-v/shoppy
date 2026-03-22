@@ -15,6 +15,7 @@
 	<SelectPrimitive.Content
 		bind:ref
 		data-slot="select-content"
+		align="start"
 		{sideOffset}
 		class={cn(
 			'relative z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-background shadow-md',
