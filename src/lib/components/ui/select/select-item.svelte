@@ -8,7 +8,7 @@
 		class: className,
 		value,
 		label,
-		children,
+		children: itemLabel,
 		...restProps
 	}: Omit<SelectPrimitive.ItemProps, 'children'> & { children?: Snippet } = $props();
 </script>
@@ -19,15 +19,15 @@
 	{value}
 	{label}
 	class={cn(
-		'relative flex w-full cursor-default select-none items-center gap-2 rounded-sm py-1.5 pr-3 pl-8 text-sm outline-none',
+		'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pr-3 pl-8 text-sm outline-none',
 		'data-highlighted:bg-accent data-highlighted:text-accent-foreground',
 		'data-disabled:pointer-events-none data-disabled:opacity-50',
 		className
 	)}
 	{...restProps}
 >
-	{#snippet child({ selected })}
-		<!-- checkmark column — always takes the same space -->
+	{#snippet children({ selected })}
+		<!-- Fixed-width checkmark column keeps all item labels at the same horizontal position -->
 		<span class="absolute left-2 flex h-4 w-4 items-center justify-center">
 			{#if selected}
 				<svg
@@ -46,6 +46,6 @@
 				</svg>
 			{/if}
 		</span>
-		{@render children?.()}
+		{@render itemLabel?.()}
 	{/snippet}
 </SelectPrimitive.Item>
