@@ -448,7 +448,7 @@
 											<!-- Checkbox -->
 											<button
 												onclick={() => handleToggleBought(item._id)}
-												class="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center"
+												class="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center sm:min-h-0 sm:min-w-0 sm:mt-0.5"
 												aria-label="Mark as bought"
 											>
 												<span class="h-5 w-5 rounded-full border-2 border-muted-foreground/40 transition-colors hover:border-primary"></span>
@@ -475,7 +475,7 @@
 											>
 												<button
 													onclick={() => openEdit(item)}
-													class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+													class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground sm:min-h-0 sm:min-w-0 sm:p-1"
 													aria-label="Edit item"
 												>
 													<svg
@@ -495,7 +495,7 @@
 												</button>
 												<button
 													onclick={() => handleDelete(item._id)}
-													class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+													class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:min-h-0 sm:min-w-0 sm:p-1"
 													aria-label="Delete item"
 												>
 													<svg
@@ -550,7 +550,7 @@
 									<!-- Checkbox (checked) -->
 									<button
 										onclick={() => handleToggleBought(item._id)}
-										class="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center"
+										class="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center sm:min-h-0 sm:min-w-0 sm:mt-0.5"
 										aria-label="Mark as not bought"
 									>
 										<span class="flex h-5 w-5 items-center justify-center rounded-full border-2 border-primary bg-primary text-primary-foreground transition-colors hover:bg-primary/80">
@@ -588,7 +588,7 @@
 									<!-- Delete -->
 									<button
 										onclick={() => handleDelete(item._id)}
-										class="flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded text-muted-foreground sm:opacity-0 sm:group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+										class="flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded text-muted-foreground sm:opacity-0 sm:group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive sm:min-h-0 sm:min-w-0 sm:p-1"
 										aria-label="Delete item"
 									>
 										<svg
@@ -813,7 +813,7 @@
 									<button
 										type="button"
 										onclick={() => (editingCategoryColor = color)}
-										class="flex min-h-[36px] min-w-[36px] items-center justify-center"
+										class="flex min-h-[36px] min-w-[36px] items-center justify-center sm:min-h-0 sm:min-w-0"
 										aria-label="Select color {color}"
 									>
 										<span
@@ -855,7 +855,7 @@
 							<button
 								onclick={() => handleMoveCategory(cat._id, 'up')}
 								disabled={i === 0}
-								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 sm:min-h-0 sm:min-w-0 sm:p-1"
 								aria-label="Move up"
 							>
 								<svg
@@ -873,7 +873,7 @@
 							<button
 								onclick={() => handleMoveCategory(cat._id, 'down')}
 								disabled={i === manageableCategories.length - 1}
-								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 sm:min-h-0 sm:min-w-0 sm:p-1"
 								aria-label="Move down"
 							>
 								<svg
@@ -891,7 +891,7 @@
 							<!-- Edit button -->
 							<button
 								onclick={() => openEditCategory(cat)}
-								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground sm:min-h-0 sm:min-w-0 sm:p-1"
 								aria-label="Edit category"
 							>
 								<svg
@@ -913,7 +913,7 @@
 							<button
 								onclick={() => handleDeleteCategory(cat._id)}
 								disabled={deletingCategoryId === cat._id}
-								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:p-1"
 								aria-label="Delete category"
 							>
 								<svg
@@ -962,7 +962,7 @@
 						<button
 							type="button"
 							onclick={() => (newCategoryColor = color)}
-							class="flex min-h-[36px] min-w-[36px] items-center justify-center"
+							class="flex min-h-[36px] min-w-[36px] items-center justify-center sm:min-h-0 sm:min-w-0"
 							aria-label="Select color {color}"
 						>
 							<span
