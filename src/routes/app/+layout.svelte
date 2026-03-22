@@ -5,10 +5,6 @@
 	const { children } = $props();
 </script>
 
-<svelte:head>
-	<title>Conference Tracker</title>
-</svelte:head>
-
 <ClerkWrapper>
 	<ConvexWrapper>
 		{@render children()}
