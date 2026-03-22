@@ -35,6 +35,34 @@
 	let editCategoryId = $state<Id<'categories'> | undefined>(undefined);
 	let editPending = $state(false);
 
+	// Categories dialog state
+	let categoriesOpen = $state(false);
+	let newCategoryName = $state('');
+	let newCategoryColor = $state('#64b5f6');
+	let newCategoryPending = $state(false);
+	let editingCategoryId = $state<Id<'categories'> | null>(null);
+	let editingCategoryName = $state('');
+	let editingCategoryColor = $state('');
+	let editingCategoryPending = $state(false);
+	let deletingCategoryId = $state<Id<'categories'> | null>(null);
+
+	const PRESET_COLORS = [
+		'#e57373',
+		'#f06292',
+		'#ba68c8',
+		'#64b5f6',
+		'#4fc3f7',
+		'#4db6ac',
+		'#81c784',
+		'#aed581',
+		'#ffd54f',
+		'#ffb74d',
+		'#d66a4f',
+		'#a1887f',
+		'#90a4ae',
+		'#9e9e9e'
+	];
+
 	// Members / invite dialog state
 	let membersOpen = $state(false);
 	let inviteLink = $state('');
@@ -172,6 +200,79 @@
 		}
 	}
 
+	// User-created (non-system) categories sorted by order
+	const manageableCategories = $derived(
+		[...(categoriesQuery.data ?? [])].filter((c) => !c.isSystem).sort((a, b) => a.order - b.order)
+	);
+
+	async function handleAddCategory(e: Event) {
+		e.preventDefault();
+		const name = newCategoryName.trim();
+		if (!name || !householdId) return;
+		newCategoryPending = true;
+		try {
+			await client.mutation(api.authed.categories.create, {
+				householdId,
+				name,
+				color: newCategoryColor
+			});
+			newCategoryName = '';
+			newCategoryColor = '#64b5f6';
+		} finally {
+			newCategoryPending = false;
+		}
+	}
+
+	function openEditCategory(cat: (typeof manageableCategories)[0]) {
+		editingCategoryId = cat._id;
+		editingCategoryName = cat.name;
+		editingCategoryColor = cat.color;
+	}
+
+	async function handleSaveCategory() {
+		if (!editingCategoryId || !editingCategoryName.trim()) return;
+		editingCategoryPending = true;
+		try {
+			await client.mutation(api.authed.categories.rename, {
+				id: editingCategoryId,
+				name: editingCategoryName.trim()
+			});
+			await client.mutation(api.authed.categories.updateColor, {
+				id: editingCategoryId,
+				color: editingCategoryColor
+			});
+			editingCategoryId = null;
+		} finally {
+			editingCategoryPending = false;
+		}
+	}
+
+	async function handleDeleteCategory(id: Id<'categories'>) {
+		deletingCategoryId = id;
+		try {
+			await client.mutation(api.authed.categories.remove, { id });
+		} finally {
+			deletingCategoryId = null;
+		}
+	}
+
+	async function handleMoveCategory(id: Id<'categories'>, direction: 'up' | 'down') {
+		if (!householdId) return;
+		const cats = manageableCategories;
+		const idx = cats.findIndex((c) => c._id === id);
+		if (idx === -1) return;
+		const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+		if (swapIdx < 0 || swapIdx >= cats.length) return;
+
+		const newOrder = cats.map((c) => c._id);
+		[newOrder[idx], newOrder[swapIdx]] = [newOrder[swapIdx], newOrder[idx]];
+
+		await client.mutation(api.authed.categories.reorder, {
+			householdId,
+			orderedIds: newOrder
+		});
+	}
+
 	async function handleCreateInvite() {
 		invitePending = true;
 		inviteLink = '';
@@ -242,6 +343,30 @@
 								<path d="M16 3.13a4 4 0 0 1 0 7.75" />
 							</svg>
 							{(membersQuery.data ?? []).length}
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							class="text-muted-foreground"
+							onclick={() => (categoriesOpen = true)}
+							aria-label="Manage categories"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="15"
+								height="15"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<path
+									d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+								/>
+								<line x1="7" y1="7" x2="7.01" y2="7" />
+							</svg>
 						</Button>
 					{/if}
 					<div
@@ -640,6 +765,200 @@
 			<Dialog.Footer>
 				<Button variant="outline" onclick={() => (editOpen = false)}>Cancel</Button>
 				<Button onclick={handleEditSave} disabled={editPending || !editName.trim()}>Save</Button>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
+
+	<!-- Categories management dialog -->
+	<Dialog.Root
+		bind:open={categoriesOpen}
+		onOpenChange={(open) => {
+			if (!open) {
+				editingCategoryId = null;
+				newCategoryName = '';
+				newCategoryColor = '#64b5f6';
+			}
+		}}
+	>
+		<Dialog.Content class="sm:max-w-md">
+			<Dialog.Header>
+				<Dialog.Title>Categories</Dialog.Title>
+				<Dialog.Description>Customize how your grocery list is organized.</Dialog.Description>
+			</Dialog.Header>
+
+			<!-- Category list -->
+			<div class="space-y-1 py-1">
+				{#each manageableCategories as cat, i (cat._id)}
+					{#if editingCategoryId === cat._id}
+						<!-- Inline edit row -->
+						<div class="space-y-2 rounded-md border bg-muted/30 p-3">
+							<Input bind:value={editingCategoryName} placeholder="Category name" autofocus />
+							<div class="flex flex-wrap gap-1.5">
+								{#each PRESET_COLORS as color (color)}
+									<button
+										type="button"
+										onclick={() => (editingCategoryColor = color)}
+										class="h-6 w-6 rounded-full border-2 transition-all {editingCategoryColor ===
+										color
+											? 'scale-110 border-foreground'
+											: 'border-transparent'}"
+										style="background-color: {color}"
+										aria-label="Select color {color}"
+									></button>
+								{/each}
+							</div>
+							<div class="flex gap-2">
+								<Button
+									size="sm"
+									onclick={handleSaveCategory}
+									disabled={editingCategoryPending || !editingCategoryName.trim()}
+									class="flex-1"
+								>
+									{editingCategoryPending ? 'Saving…' : 'Save'}
+								</Button>
+								<Button
+									size="sm"
+									variant="outline"
+									onclick={() => (editingCategoryId = null)}
+									disabled={editingCategoryPending}
+								>
+									Cancel
+								</Button>
+							</div>
+						</div>
+					{:else}
+						<!-- Display row -->
+						<div class="flex items-center gap-2 rounded-md border bg-card px-3 py-2">
+							<span class="h-3 w-3 shrink-0 rounded-full" style="background-color: {cat.color}"
+							></span>
+							<span class="flex-1 text-sm">{cat.name}</span>
+							<!-- Reorder buttons -->
+							<button
+								onclick={() => handleMoveCategory(cat._id, 'up')}
+								disabled={i === 0}
+								class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+								aria-label="Move up"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="13"
+									height="13"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"><polyline points="18 15 12 9 6 15" /></svg
+								>
+							</button>
+							<button
+								onclick={() => handleMoveCategory(cat._id, 'down')}
+								disabled={i === manageableCategories.length - 1}
+								class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+								aria-label="Move down"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="13"
+									height="13"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg
+								>
+							</button>
+							<!-- Edit button -->
+							<button
+								onclick={() => openEditCategory(cat)}
+								class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+								aria-label="Edit category"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="13"
+									height="13"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path
+										d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+									/></svg
+								>
+							</button>
+							<!-- Delete button -->
+							<button
+								onclick={() => handleDeleteCategory(cat._id)}
+								disabled={deletingCategoryId === cat._id}
+								class="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+								aria-label="Delete category"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="13"
+									height="13"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									><polyline points="3 6 5 6 21 6" /><path
+										d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+									/><path d="M10 11v6" /><path d="M14 11v6" /><path
+										d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+									/></svg
+								>
+							</button>
+						</div>
+					{/if}
+				{/each}
+
+				{#if manageableCategories.length === 0}
+					<p class="py-4 text-center text-sm text-muted-foreground">No custom categories yet.</p>
+				{/if}
+			</div>
+
+			<!-- Add new category -->
+			<div class="space-y-2 border-t pt-4">
+				<p class="text-sm font-medium">Add category</p>
+				<form onsubmit={handleAddCategory} class="flex gap-2">
+					<Input
+						bind:value={newCategoryName}
+						placeholder="Category name"
+						class="flex-1"
+						disabled={newCategoryPending}
+						autocomplete="off"
+					/>
+					<Button type="submit" size="sm" disabled={newCategoryPending || !newCategoryName.trim()}>
+						{newCategoryPending ? 'Adding…' : 'Add'}
+					</Button>
+				</form>
+				<div class="flex flex-wrap gap-1.5">
+					{#each PRESET_COLORS as color (color)}
+						<button
+							type="button"
+							onclick={() => (newCategoryColor = color)}
+							class="h-6 w-6 rounded-full border-2 transition-all {newCategoryColor === color
+								? 'scale-110 border-foreground'
+								: 'border-transparent'}"
+							style="background-color: {color}"
+							aria-label="Select color {color}"
+						></button>
+					{/each}
+				</div>
+				<div class="flex items-center gap-2 text-xs text-muted-foreground">
+					<span class="h-3 w-3 rounded-full" style="background-color: {newCategoryColor}"></span>
+					<span>Selected color</span>
+				</div>
+			</div>
+
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (categoriesOpen = false)}>Close</Button>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
