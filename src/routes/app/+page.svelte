@@ -46,6 +46,7 @@
 	let editingCategoryColor = $state('');
 	let editingCategoryPending = $state(false);
 	let deletingCategoryId = $state<Id<'categories'> | null>(null);
+	let expandedCategoryId = $state<Id<'categories'> | null>(null);
 
 	const PRESET_COLORS = [
 		'#e57373',
@@ -225,6 +226,7 @@
 	}
 
 	function openEditCategory(cat: (typeof manageableCategories)[0]) {
+		expandedCategoryId = null;
 		editingCategoryId = cat._id;
 		editingCategoryName = cat.name;
 		editingCategoryColor = cat.color;
@@ -790,6 +792,7 @@
 		onOpenChange={(open) => {
 			if (!open) {
 				editingCategoryId = null;
+				expandedCategoryId = null;
 				newCategoryName = '';
 				newCategoryColor = '#64b5f6';
 			}
@@ -846,93 +849,222 @@
 							</div>
 						</div>
 					{:else}
-						<!-- Display row -->
-						<div class="flex items-center gap-2 rounded-md border bg-card px-3 py-2">
-							<span class="h-3 w-3 shrink-0 rounded-full" style="background-color: {cat.color}"
-							></span>
-							<span class="flex-1 text-sm">{cat.name}</span>
-							<!-- Reorder buttons -->
-							<button
-								onclick={() => handleMoveCategory(cat._id, 'up')}
-								disabled={i === 0}
-								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 sm:min-h-0 sm:min-w-0 sm:p-1"
-								aria-label="Move up"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="13"
-									height="13"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"><polyline points="18 15 12 9 6 15" /></svg
+						<!-- Display row: tap-to-expand on mobile, compact on desktop -->
+						<div class="overflow-hidden rounded-md border bg-card">
+							<!-- Main row -->
+							<div class="flex items-center gap-2 px-3 py-2">
+								<span
+									class="h-3 w-3 shrink-0 rounded-full"
+									style="background-color: {cat.color}"
+								></span>
+								<span class="flex-1 truncate text-sm">{cat.name}</span>
+
+								<!-- Desktop: all action buttons inline (hidden on mobile) -->
+								<div class="hidden items-center sm:flex">
+									<button
+										onclick={() => handleMoveCategory(cat._id, 'up')}
+										disabled={i === 0}
+										class="flex p-1 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+										aria-label="Move up"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="13"
+											height="13"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"><polyline points="18 15 12 9 6 15" /></svg
+										>
+									</button>
+									<button
+										onclick={() => handleMoveCategory(cat._id, 'down')}
+										disabled={i === manageableCategories.length - 1}
+										class="flex p-1 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+										aria-label="Move down"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="13"
+											height="13"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg
+										>
+									</button>
+									<button
+										onclick={() => openEditCategory(cat)}
+										class="flex p-1 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+										aria-label="Edit category"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="13"
+											height="13"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path
+												d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+											/></svg
+										>
+									</button>
+									<button
+										onclick={() => handleDeleteCategory(cat._id)}
+										disabled={deletingCategoryId === cat._id}
+										class="flex p-1 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+										aria-label="Delete category"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="13"
+											height="13"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											><polyline points="3 6 5 6 21 6" /><path
+												d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+											/><path d="M10 11v6" /><path d="M14 11v6" /><path
+												d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+											/></svg
+										>
+									</button>
+								</div>
+
+								<!-- Mobile: toggle button to expand actions (hidden on desktop) -->
+								<button
+									onclick={() =>
+										(expandedCategoryId =
+											expandedCategoryId === cat._id ? null : cat._id)}
+									class="flex h-10 w-10 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground sm:hidden"
+									aria-label={expandedCategoryId === cat._id
+										? 'Hide actions'
+										: 'Show actions'}
+									aria-expanded={expandedCategoryId === cat._id}
 								>
-							</button>
-							<button
-								onclick={() => handleMoveCategory(cat._id, 'down')}
-								disabled={i === manageableCategories.length - 1}
-								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 sm:min-h-0 sm:min-w-0 sm:p-1"
-								aria-label="Move down"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="13"
-									height="13"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="16"
+										height="16"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									>
+										<circle cx="12" cy="5" r="1" /><circle
+											cx="12"
+											cy="12"
+											r="1"
+										/><circle cx="12" cy="19" r="1" />
+									</svg>
+								</button>
+							</div>
+
+							<!-- Mobile expanded actions panel (hidden on desktop) -->
+							{#if expandedCategoryId === cat._id}
+								<div
+									class="flex items-center justify-around border-t px-2 py-1 sm:hidden"
 								>
-							</button>
-							<!-- Edit button -->
-							<button
-								onclick={() => openEditCategory(cat)}
-								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground sm:min-h-0 sm:min-w-0 sm:p-1"
-								aria-label="Edit category"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="13"
-									height="13"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path
-										d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
-									/></svg
-								>
-							</button>
-							<!-- Delete button -->
-							<button
-								onclick={() => handleDeleteCategory(cat._id)}
-								disabled={deletingCategoryId === cat._id}
-								class="flex min-h-[40px] min-w-[40px] items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:p-1"
-								aria-label="Delete category"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="13"
-									height="13"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									><polyline points="3 6 5 6 21 6" /><path
-										d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
-									/><path d="M10 11v6" /><path d="M14 11v6" /><path
-										d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
-									/></svg
-								>
-							</button>
+									<!-- Move up -->
+									<button
+										onclick={() => handleMoveCategory(cat._id, 'up')}
+										disabled={i === 0}
+										class="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+										aria-label="Move up"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="18"
+											height="18"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"><polyline points="18 15 12 9 6 15" /></svg
+										>
+									</button>
+									<!-- Move down -->
+									<button
+										onclick={() => handleMoveCategory(cat._id, 'down')}
+										disabled={i === manageableCategories.length - 1}
+										class="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+										aria-label="Move down"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="18"
+											height="18"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg
+										>
+									</button>
+									<!-- Divider -->
+									<div class="h-6 w-px bg-border"></div>
+									<!-- Edit -->
+									<button
+										onclick={() => openEditCategory(cat)}
+										class="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+										aria-label="Edit category"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="18"
+											height="18"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path
+												d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+											/></svg
+										>
+									</button>
+									<!-- Delete -->
+									<button
+										onclick={() => handleDeleteCategory(cat._id)}
+										disabled={deletingCategoryId === cat._id}
+										class="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+										aria-label="Delete category"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="18"
+											height="18"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											><polyline points="3 6 5 6 21 6" /><path
+												d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+											/><path d="M10 11v6" /><path d="M14 11v6" /><path
+												d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+											/></svg
+										>
+									</button>
+								</div>
+							{/if}
 						</div>
 					{/if}
 				{/each}
