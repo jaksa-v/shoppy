@@ -468,7 +468,7 @@
 
 											<!-- Actions -->
 											<div
-												class="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100"
+												class="flex shrink-0 gap-1 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
 											>
 												<button
 													onclick={() => openEdit(item)}
@@ -583,7 +583,7 @@
 									<!-- Delete -->
 									<button
 										onclick={() => handleDelete(item._id)}
-										class="flex shrink-0 rounded p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+										class="flex shrink-0 rounded p-1 text-muted-foreground sm:opacity-0 sm:group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
 										aria-label="Delete item"
 									>
 										<svg
