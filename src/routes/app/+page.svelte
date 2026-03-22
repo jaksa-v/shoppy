@@ -27,14 +27,6 @@
 	let quickAddInputRef = $state<HTMLInputElement | null>(null);
 	let hasEverHadItems = $state(false);
 
-	// Pull-to-refresh state
-	let pullStartY = $state(0);
-	let pullDistance = $state(0);
-	let isRefreshing = $state(false);
-	let isPulling = $state(false);
-	const PULL_THRESHOLD = 64;
-	const PULL_MAX = 96;
-
 	// Clear bought state
 	let clearPending = $state(false);
 	let clearConfirmOpen = $state(false);
@@ -83,61 +75,15 @@
 	let invitePending = $state(false);
 	let inviteCopied = $state(false);
 
-	onMount(() => {
-		// Bootstrap household
-		(async () => {
-			if (!clerkContext.clerk.user) return;
-			bootstrapping = true;
-			try {
-				const household = await client.mutation(api.authed.households.getOrCreate, {});
-				if (household) householdId = household._id;
-			} finally {
-				bootstrapping = false;
-			}
-		})();
-
-		// Pull-to-refresh touch handlers (mobile only)
-		function onTouchStart(e: TouchEvent) {
-			if (window.scrollY === 0 && !isRefreshing && e.touches.length === 1) {
-				pullStartY = e.touches[0].clientY;
-				isPulling = true;
-			}
+	onMount(async () => {
+		if (!clerkContext.clerk.user) return;
+		bootstrapping = true;
+		try {
+			const household = await client.mutation(api.authed.households.getOrCreate, {});
+			if (household) householdId = household._id;
+		} finally {
+			bootstrapping = false;
 		}
-
-		function onTouchMove(e: TouchEvent) {
-			if (!isPulling || isRefreshing) return;
-			const delta = e.touches[0].clientY - pullStartY;
-			if (delta > 0 && window.scrollY === 0) {
-				pullDistance = Math.min(delta * 0.5, PULL_MAX);
-				if (pullDistance > 8) e.preventDefault();
-			} else {
-				pullDistance = 0;
-				isPulling = false;
-			}
-		}
-
-		function onTouchEnd() {
-			if (!isPulling) return;
-			const captured = pullDistance;
-			isPulling = false;
-			pullDistance = 0;
-			if (captured >= PULL_THRESHOLD) {
-				isRefreshing = true;
-				setTimeout(() => {
-					isRefreshing = false;
-				}, 1000);
-			}
-		}
-
-		document.addEventListener('touchstart', onTouchStart, { passive: true });
-		document.addEventListener('touchmove', onTouchMove, { passive: false });
-		document.addEventListener('touchend', onTouchEnd, { passive: true });
-
-		return () => {
-			document.removeEventListener('touchstart', onTouchStart);
-			document.removeEventListener('touchmove', onTouchMove);
-			document.removeEventListener('touchend', onTouchEnd);
-		};
 	});
 
 	const activeListQuery = useQuery(api.authed.groceryLists.getActive, () =>
@@ -453,36 +399,6 @@
 				</div>
 			</div>
 		</header>
-
-		<!-- Pull-to-refresh indicator (mobile only) -->
-		{#if pullDistance > 0 || isRefreshing}
-			<div
-				class="pointer-events-none fixed inset-x-0 top-0 z-30 flex justify-center sm:hidden"
-				style="padding-top: calc(4.5rem + env(safe-area-inset-top, 0px)); transform: translateY({isRefreshing
-					? 0
-					: pullDistance - PULL_MAX}px)"
-			>
-				<div
-					class="flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm text-muted-foreground shadow-md transition-opacity"
-					style="opacity: {isRefreshing ? 1 : Math.min(pullDistance / PULL_THRESHOLD, 1)}"
-				>
-					<div
-						class="h-4 w-4 rounded-full border-2 border-current border-t-transparent"
-						class:animate-spin={isRefreshing}
-						style="transform: rotate({isRefreshing
-							? 0
-							: Math.min((pullDistance / PULL_THRESHOLD) * 180, 180)}deg)"
-					></div>
-					<span
-						>{isRefreshing
-							? 'Refreshing\u2026'
-							: pullDistance >= PULL_THRESHOLD
-								? 'Release to refresh'
-								: 'Pull to refresh'}</span
-					>
-				</div>
-			</div>
-		{/if}
 
 		<!-- Quick-add bar -->
 		{#if householdId && activeListQuery.data}
