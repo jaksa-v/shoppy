@@ -13,7 +13,11 @@
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { page } from '$app/state';
 	import { createStandaloneDetector } from '$lib/pwa/standalone.svelte.js';
-	import { AUTH_COMPLETION_INSTALL_PROMPT_KEY } from '$lib/auth/auth-flow.js';
+	import {
+		AUTH_COMPLETION_INSTALL_PROMPT_KEY,
+		clearPendingInviteCode,
+		readPendingInviteCode
+	} from '$lib/auth/auth-flow.js';
 
 	const clerkContext = getClerkContext();
 	const shell = createStandaloneDetector();
@@ -82,6 +86,28 @@
 		if (!clerkContext.clerk.user) return;
 		bootstrapping = true;
 		try {
+			const pendingInviteCode = readPendingInviteCode();
+			if (pendingInviteCode) {
+				try {
+					await client.mutation(api.authed.invites.accept, { code: pendingInviteCode });
+					clearPendingInviteCode();
+				} catch (error) {
+					if (error instanceof Error) {
+						const terminalInviteErrors = [
+							'Invite not found',
+							'Invite already used',
+							'Invite expired',
+							'Already a member of this household',
+							'You already own this household'
+						];
+
+						if (terminalInviteErrors.includes(error.message)) {
+							clearPendingInviteCode();
+						}
+					}
+				}
+			}
+
 			const household = await client.mutation(api.authed.households.getOrCreate, {});
 			if (household) householdId = household._id;
 		} finally {
@@ -423,23 +449,6 @@
 		</form>
 	{/snippet}
 
-	{#snippet quickAddFormDesktop()}
-		<form onsubmit={handleQuickAdd} class="flex gap-2">
-			<Input
-				bind:value={quickAddName}
-				placeholder="Add an item…"
-				class="h-11 flex-1 rounded-full px-4"
-				disabled={quickAddPending}
-				autocomplete="off"
-			/>
-			<Button
-				type="submit"
-				disabled={quickAddPending || !quickAddName.trim()}
-				class="h-11 rounded-full px-5">Add</Button
-			>
-		</form>
-	{/snippet}
-
 	<div class="min-h-dvh bg-background">
 		{#if shell.isStandalone}
 			<!--
@@ -456,8 +465,8 @@
 			</div>
 		{:else}
 			<!--
-				Browser mode: header scrolls naturally; quick-add bar is sticky at
-				the top on desktop (sm+) and fixed at the bottom on mobile.
+				Browser mode: header scrolls naturally; quick-add bar is independently
+				sticky so it anchors at the top after the header scrolls away.
 			-->
 			<header class="border-b bg-card">
 				<div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
@@ -465,18 +474,18 @@
 				</div>
 			</header>
 			{#if householdId && activeListQuery.data}
-				<div class="sticky top-0 z-10 hidden border-b bg-card/95 backdrop-blur sm:block">
+				<div class="sticky top-0 z-10 border-b bg-card/95 backdrop-blur">
 					<div class="mx-auto max-w-3xl px-4 py-3 sm:px-6">
-						{@render quickAddFormDesktop()}
+						{@render quickAddForm()}
 					</div>
 				</div>
 			{/if}
 		{/if}
 
-		<!-- Mobile-only fixed bottom bar for quick-add input -->
-		{#if householdId && activeListQuery.data}
+		<!-- Standalone: fixed bottom bar for quick-add input (thumb-friendly) -->
+		{#if shell.isStandalone && householdId && activeListQuery.data}
 			<div
-				class="fixed bottom-0 left-0 right-0 z-20 border-t bg-card/95 backdrop-blur-sm sm:hidden"
+				class="fixed right-0 bottom-0 left-0 z-20 border-t bg-card/95 backdrop-blur-sm"
 				style="padding-bottom: env(safe-area-inset-bottom)"
 			>
 				<div class="mx-auto max-w-3xl px-4 py-3">
@@ -485,7 +494,10 @@
 			</div>
 		{/if}
 
-		<main class="mx-auto max-w-3xl px-4 py-6 pb-24 sm:px-6 sm:pb-6">
+		<main
+			class="mx-auto max-w-3xl px-4 py-6 sm:px-6"
+			style="padding-bottom: calc({shell.isStandalone ? '5rem' : '1.5rem'} + env(safe-area-inset-bottom))"
+		>
 			{#if isLoading || !householdId}
 				<div class="flex items-center justify-center py-20">
 					<div class="flex items-center gap-2 text-muted-foreground">

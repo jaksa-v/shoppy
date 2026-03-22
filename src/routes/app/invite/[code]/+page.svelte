@@ -4,8 +4,13 @@
 	import { api } from '../../../../convex/_generated/api';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { AUTH_COMPLETION_INSTALL_PROMPT_KEY } from '$lib/auth/auth-flow.js';
+	import {
+		AUTH_COMPLETION_INSTALL_PROMPT_KEY,
+		clearPendingInviteCode,
+		persistPendingInviteCode
+	} from '$lib/auth/auth-flow.js';
 
 	const clerkContext = getClerkContext();
 	const client = useConvexClient();
@@ -18,12 +23,19 @@
 	let error = $state('');
 	let done = $state(false);
 
+	onMount(() => {
+		if (code) {
+			persistPendingInviteCode(code);
+		}
+	});
+
 	async function handleAccept() {
 		if (!code) return;
 		accepting = true;
 		error = '';
 		try {
 			await client.mutation(api.authed.invites.accept, { code });
+			clearPendingInviteCode();
 			done = true;
 			// Redirect to app after a short delay
 			await new Promise((r) => setTimeout(r, 1500));
@@ -40,6 +52,12 @@
 	const isExpired = $derived(invite ? invite.expiresAt < Date.now() : false);
 	const isUsed = $derived(invite ? !!invite.usedBy : false);
 	const isValid = $derived(!!invite && !isExpired && !isUsed);
+
+	$effect(() => {
+		if (inviteQuery.data !== undefined && (!inviteQuery.data || isUsed || isExpired || done)) {
+			clearPendingInviteCode();
+		}
+	});
 </script>
 
 {#if !clerkContext.clerk.user}
