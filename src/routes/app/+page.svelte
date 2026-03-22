@@ -12,8 +12,10 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { page } from '$app/state';
+	import { createStandaloneDetector } from '$lib/pwa/standalone.svelte.js';
 
 	const clerkContext = getClerkContext();
+	const shell = createStandaloneDetector();
 	const client = useConvexClient();
 
 	let householdId = $state<Id<'households'> | null>(null);
@@ -336,90 +338,127 @@
 		></div>
 	</div>
 {:else}
-	<div class="min-h-screen bg-background">
-		<header class="border-b bg-card">
-			<div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
-				<h1 class="text-lg font-semibold tracking-tight">🛒 Shoppy</h1>
-				<div class="flex items-center gap-3">
-					{#if householdId}
-						<Button
-							variant="ghost"
-							size="sm"
-							class="gap-1.5 text-muted-foreground"
-							onclick={() => (membersOpen = true)}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="15"
-								height="15"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							>
-								<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-								<circle cx="9" cy="7" r="4" />
-								<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-								<path d="M16 3.13a4 4 0 0 1 0 7.75" />
-							</svg>
-							{(membersQuery.data ?? []).length}
-						</Button>
-						<Button
-							variant="ghost"
-							size="sm"
-							class="text-muted-foreground"
-							onclick={() => (categoriesOpen = true)}
-							aria-label="Manage categories"
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="15"
-								height="15"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							>
-								<path
-									d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
-								/>
-								<line x1="7" y1="7" x2="7.01" y2="7" />
-							</svg>
-						</Button>
-					{/if}
-					<div
-						{@attach (el) => {
-							clerkContext.clerk.mountUserButton(el);
-						}}
-					></div>
-				</div>
-			</div>
-		</header>
-
-		<!-- Quick-add bar -->
-		{#if householdId && activeListQuery.data}
+	<!--
+		Shared snippets for header actions and quick-add form.
+		Rendered in different structural contexts depending on standalone vs browser mode.
+	-->
+	{#snippet headerActions()}
+		<h1 class="text-base font-semibold tracking-tight">🛒 Shoppy</h1>
+		<div class="flex items-center gap-2">
+			{#if householdId}
+				<Button
+					variant="ghost"
+					size="sm"
+					class="gap-1.5 text-muted-foreground"
+					onclick={() => (membersOpen = true)}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="15"
+						height="15"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+						<circle cx="9" cy="7" r="4" />
+						<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+						<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+					</svg>
+					{(membersQuery.data ?? []).length}
+				</Button>
+				<Button
+					variant="ghost"
+					size="sm"
+					class="text-muted-foreground"
+					onclick={() => (categoriesOpen = true)}
+					aria-label="Manage categories"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="15"
+						height="15"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path
+							d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+						/>
+						<line x1="7" y1="7" x2="7.01" y2="7" />
+					</svg>
+				</Button>
+			{/if}
 			<div
-				class="sticky top-0 z-10 border-b bg-card/95 backdrop-blur"
+				{@attach (el) => {
+					clerkContext.clerk.mountUserButton(el);
+				}}
+			></div>
+		</div>
+	{/snippet}
+
+	{#snippet quickAddForm()}
+		<form onsubmit={handleQuickAdd} class="flex gap-2">
+			<Input
+				bind:value={quickAddName}
+				bind:ref={quickAddInputRef}
+				placeholder="Add an item…"
+				class="h-11 flex-1 rounded-full px-4"
+				disabled={quickAddPending}
+				autocomplete="off"
+			/>
+			<Button
+				type="submit"
+				disabled={quickAddPending || !quickAddName.trim()}
+				class="h-11 rounded-full px-5"
+			>Add</Button>
+		</form>
+	{/snippet}
+
+	<div class="min-h-dvh bg-background">
+		{#if shell.isStandalone}
+			<!--
+				Standalone mode: unified sticky top chrome.
+				Header + quick-add are a single sticky unit so the safe-area top inset
+				is applied once at the outermost level and both elements stay anchored
+				while the list scrolls beneath them.
+			-->
+			<div
+				class="sticky top-0 z-20 border-b bg-card/95 backdrop-blur-sm"
 				style="padding-top: env(safe-area-inset-top)"
 			>
-				<div class="mx-auto max-w-3xl px-4 py-3 sm:px-6">
-					<form onsubmit={handleQuickAdd} class="flex gap-2">
-						<Input
-							bind:value={quickAddName}
-							bind:ref={quickAddInputRef}
-							placeholder="Add an item…"
-							class="flex-1"
-							disabled={quickAddPending}
-							autocomplete="off"
-						/>
-						<Button type="submit" disabled={quickAddPending || !quickAddName.trim()}>Add</Button>
-					</form>
+				<div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-2 sm:px-6">
+					{@render headerActions()}
 				</div>
+				{#if householdId && activeListQuery.data}
+					<div class="mx-auto max-w-3xl px-4 pb-3 sm:px-6">
+						{@render quickAddForm()}
+					</div>
+				{/if}
 			</div>
+		{:else}
+			<!--
+				Browser mode: header scrolls naturally; quick-add bar is independently
+				sticky so it anchors at the top after the header scrolls away.
+			-->
+			<header class="border-b bg-card">
+				<div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
+					{@render headerActions()}
+				</div>
+			</header>
+			{#if householdId && activeListQuery.data}
+				<div class="sticky top-0 z-10 border-b bg-card/95 backdrop-blur">
+					<div class="mx-auto max-w-3xl px-4 py-3 sm:px-6">
+						{@render quickAddForm()}
+					</div>
+				</div>
+			{/if}
 		{/if}
 
 		<main

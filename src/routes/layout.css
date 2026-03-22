@@ -3,6 +3,7 @@
 @import '@fontsource-variable/nunito-sans';
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant standalone (@media (display-mode: standalone));
 @plugin '@tailwindcss/typography';
 
 :root {
