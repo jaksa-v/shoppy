@@ -761,7 +761,7 @@
 						</Select.Trigger>
 						<Select.Content>
 							<Select.Item value="">Uncategorized</Select.Item>
-							{#each sortedCategories as cat (cat._id)}
+							{#each sortedCategories.filter((c) => c.name.toLowerCase() !== 'uncategorized') as cat (cat._id)}
 								<Select.Item value={cat._id}>{cat.name}</Select.Item>
 							{/each}
 						</Select.Content>
