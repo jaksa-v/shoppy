@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import ClerkUserButtonMount from '$lib/frontend/auth/ClerkUserButtonMount.svelte';
+	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 
 	type Props = {
 		memberCount: number;
@@ -57,5 +58,6 @@
 			</svg>
 		</Button>
 	{/if}
+	<ThemeToggle />
 	<ClerkUserButtonMount />
 </div>
