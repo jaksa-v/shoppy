@@ -1,8 +1,12 @@
 <script lang="ts">
+	import { getClerkContext } from '$lib/stores/clerk.svelte';
 	import { createInstallPromptCoordinator } from '$lib/pwa/install-prompt.svelte.js';
+	import { createInstallPromptAfterAuthGate } from '$lib/auth/install-prompt-after-auth.svelte.js';
 	import IphoneInstallSheet from './IphoneInstallSheet.svelte';
 
+	const clerkContext = getClerkContext();
 	const coordinator = createInstallPromptCoordinator();
+	const authGate = createInstallPromptAfterAuthGate(() => !!clerkContext.currentSession);
 
 	let showIOSSheet = $state(false);
 
@@ -15,7 +19,7 @@
 	}
 </script>
 
-{#if coordinator.eligible}
+{#if authGate.ready && coordinator.eligible}
 	<div
 		class="fixed right-0 bottom-0 left-0 z-30 border-t bg-card/95 backdrop-blur-sm"
 		style="padding-bottom: env(safe-area-inset-bottom)"
@@ -33,8 +37,8 @@
 
 			<!-- Copy -->
 			<div class="min-w-0 flex-1">
-				<p class="text-sm font-medium leading-tight">Add Shoppy to your Home Screen</p>
-				<p class="mt-0.5 text-xs text-muted-foreground leading-tight">
+				<p class="text-sm leading-tight font-medium">Add Shoppy to your Home Screen</p>
+				<p class="mt-0.5 text-xs leading-tight text-muted-foreground">
 					{#if coordinator.isIOS}
 						Open in Safari · Tap Share → Add to Home Screen
 					{:else}

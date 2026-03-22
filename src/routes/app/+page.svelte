@@ -13,6 +13,7 @@
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { page } from '$app/state';
 	import { createStandaloneDetector } from '$lib/pwa/standalone.svelte.js';
+	import { AUTH_COMPLETION_INSTALL_PROMPT_KEY } from '$lib/auth/auth-flow.js';
 
 	const clerkContext = getClerkContext();
 	const shell = createStandaloneDetector();
@@ -333,6 +334,7 @@
 	<div class="flex min-h-screen items-center justify-center bg-background">
 		<div
 			{@attach (el) => {
+				sessionStorage.setItem(AUTH_COMPLETION_INSTALL_PROMPT_KEY, 'true');
 				clerkContext.clerk.mountSignIn(el, {});
 			}}
 		></div>
@@ -416,8 +418,8 @@
 			<Button
 				type="submit"
 				disabled={quickAddPending || !quickAddName.trim()}
-				class="h-11 rounded-full px-5"
-			>Add</Button>
+				class="h-11 rounded-full px-5">Add</Button
+			>
 		</form>
 	{/snippet}
 

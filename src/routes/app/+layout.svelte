@@ -9,7 +9,6 @@
 <ClerkWrapper>
 	<ConvexWrapper>
 		{@render children()}
+		<InstallBanner />
 	</ConvexWrapper>
 </ClerkWrapper>
-
-<InstallBanner />

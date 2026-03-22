@@ -5,6 +5,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { AUTH_COMPLETION_INSTALL_PROMPT_KEY } from '$lib/auth/auth-flow.js';
 
 	const clerkContext = getClerkContext();
 	const client = useConvexClient();
@@ -53,6 +54,7 @@
 			</div>
 			<div
 				{@attach (el) => {
+					sessionStorage.setItem(AUTH_COMPLETION_INSTALL_PROMPT_KEY, 'true');
 					clerkContext.clerk.mountSignIn(el, {
 						forceRedirectUrl: page.url.pathname
 					});

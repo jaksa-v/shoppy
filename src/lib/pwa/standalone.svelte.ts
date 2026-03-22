@@ -15,8 +15,7 @@ export function createStandaloneDetector() {
 		const mq = window.matchMedia('(display-mode: standalone)');
 
 		const update = () => {
-			standalone =
-				mq.matches || (navigator as { standalone?: boolean }).standalone === true;
+			standalone = mq.matches || (navigator as { standalone?: boolean }).standalone === true;
 		};
 
 		update();
