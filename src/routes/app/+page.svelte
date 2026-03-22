@@ -380,7 +380,7 @@
 
 		<!-- Quick-add bar -->
 		{#if householdId && activeListQuery.data}
-			<div class="sticky top-0 z-10 border-b bg-card/95 backdrop-blur">
+			<div class="sticky top-0 z-10 border-b bg-card/95 backdrop-blur" style="padding-top: env(safe-area-inset-top)">
 				<div class="mx-auto max-w-3xl px-4 py-3 sm:px-6">
 					<form onsubmit={handleQuickAdd} class="flex gap-2">
 						<Input
@@ -396,7 +396,7 @@
 			</div>
 		{/if}
 
-		<main class="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+		<main class="mx-auto max-w-3xl px-4 py-6 sm:px-6" style="padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))">
 			{#if isLoading || !householdId}
 				<div class="flex items-center justify-center py-20">
 					<div class="flex items-center gap-2 text-muted-foreground">
