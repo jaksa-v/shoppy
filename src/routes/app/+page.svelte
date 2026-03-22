@@ -423,13 +423,28 @@
 		</form>
 	{/snippet}
 
+	{#snippet quickAddFormDesktop()}
+		<form onsubmit={handleQuickAdd} class="flex gap-2">
+			<Input
+				bind:value={quickAddName}
+				placeholder="Add an item…"
+				class="h-11 flex-1 rounded-full px-4"
+				disabled={quickAddPending}
+				autocomplete="off"
+			/>
+			<Button
+				type="submit"
+				disabled={quickAddPending || !quickAddName.trim()}
+				class="h-11 rounded-full px-5">Add</Button
+			>
+		</form>
+	{/snippet}
+
 	<div class="min-h-dvh bg-background">
 		{#if shell.isStandalone}
 			<!--
-				Standalone mode: unified sticky top chrome.
-				Header + quick-add are a single sticky unit so the safe-area top inset
-				is applied once at the outermost level and both elements stay anchored
-				while the list scrolls beneath them.
+				Standalone mode: header stays sticky at top; quick-add form is
+				fixed at the bottom for easy thumb access on mobile.
 			-->
 			<div
 				class="sticky top-0 z-20 border-b bg-card/95 backdrop-blur-sm"
@@ -438,16 +453,11 @@
 				<div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-2 sm:px-6">
 					{@render headerActions()}
 				</div>
-				{#if householdId && activeListQuery.data}
-					<div class="mx-auto max-w-3xl px-4 pb-3 sm:px-6">
-						{@render quickAddForm()}
-					</div>
-				{/if}
 			</div>
 		{:else}
 			<!--
-				Browser mode: header scrolls naturally; quick-add bar is independently
-				sticky so it anchors at the top after the header scrolls away.
+				Browser mode: header scrolls naturally; quick-add bar is sticky at
+				the top on desktop (sm+) and fixed at the bottom on mobile.
 			-->
 			<header class="border-b bg-card">
 				<div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
@@ -455,18 +465,27 @@
 				</div>
 			</header>
 			{#if householdId && activeListQuery.data}
-				<div class="sticky top-0 z-10 border-b bg-card/95 backdrop-blur">
+				<div class="sticky top-0 z-10 hidden border-b bg-card/95 backdrop-blur sm:block">
 					<div class="mx-auto max-w-3xl px-4 py-3 sm:px-6">
-						{@render quickAddForm()}
+						{@render quickAddFormDesktop()}
 					</div>
 				</div>
 			{/if}
 		{/if}
 
-		<main
-			class="mx-auto max-w-3xl px-4 py-6 sm:px-6"
-			style="padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))"
-		>
+		<!-- Mobile-only fixed bottom bar for quick-add input -->
+		{#if householdId && activeListQuery.data}
+			<div
+				class="fixed bottom-0 left-0 right-0 z-20 border-t bg-card/95 backdrop-blur-sm sm:hidden"
+				style="padding-bottom: env(safe-area-inset-bottom)"
+			>
+				<div class="mx-auto max-w-3xl px-4 py-3">
+					{@render quickAddForm()}
+				</div>
+			</div>
+		{/if}
+
+		<main class="mx-auto max-w-3xl px-4 py-6 pb-24 sm:px-6 sm:pb-6">
 			{#if isLoading || !householdId}
 				<div class="flex items-center justify-center py-20">
 					<div class="flex items-center gap-2 text-muted-foreground">
@@ -482,7 +501,7 @@
 				<div class="flex flex-col items-center justify-center py-24 text-center">
 					<div class="mb-4 text-5xl">🛒</div>
 					<h2 class="mb-1 text-base font-semibold">Your list is empty</h2>
-					<p class="text-sm text-muted-foreground">Use the bar above to add your first item.</p>
+					<p class="text-sm text-muted-foreground">Add your first item to get started.</p>
 				</div>
 			{:else}
 				<!-- Active items grouped by category -->
