@@ -12,8 +12,12 @@
 		children?: import('svelte').Snippet;
 	};
 
-	let { value = $bindable(undefined), open = $bindable(false), children, ...restProps }: Props =
-		$props();
+	let {
+		value = $bindable(undefined),
+		open = $bindable(false),
+		children,
+		...restProps
+	}: Props = $props();
 </script>
 
 <SelectPrimitive.Root type="single" bind:value bind:open {...restProps}>

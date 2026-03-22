@@ -23,6 +23,18 @@
 	let quickAddName = $state('');
 	let quickAddPending = $state(false);
 
+	// Auto-focus state
+	let quickAddInputRef = $state<HTMLInputElement | null>(null);
+	let hasEverHadItems = $state(false);
+
+	// Pull-to-refresh state
+	let pullStartY = $state(0);
+	let pullDistance = $state(0);
+	let isRefreshing = $state(false);
+	let isPulling = $state(false);
+	const PULL_THRESHOLD = 64;
+	const PULL_MAX = 96;
+
 	// Clear bought state
 	let clearPending = $state(false);
 	let clearConfirmOpen = $state(false);
@@ -71,15 +83,61 @@
 	let invitePending = $state(false);
 	let inviteCopied = $state(false);
 
-	onMount(async () => {
-		if (!clerkContext.clerk.user) return;
-		bootstrapping = true;
-		try {
-			const household = await client.mutation(api.authed.households.getOrCreate, {});
-			if (household) householdId = household._id;
-		} finally {
-			bootstrapping = false;
+	onMount(() => {
+		// Bootstrap household
+		(async () => {
+			if (!clerkContext.clerk.user) return;
+			bootstrapping = true;
+			try {
+				const household = await client.mutation(api.authed.households.getOrCreate, {});
+				if (household) householdId = household._id;
+			} finally {
+				bootstrapping = false;
+			}
+		})();
+
+		// Pull-to-refresh touch handlers (mobile only)
+		function onTouchStart(e: TouchEvent) {
+			if (window.scrollY === 0 && !isRefreshing && e.touches.length === 1) {
+				pullStartY = e.touches[0].clientY;
+				isPulling = true;
+			}
 		}
+
+		function onTouchMove(e: TouchEvent) {
+			if (!isPulling || isRefreshing) return;
+			const delta = e.touches[0].clientY - pullStartY;
+			if (delta > 0 && window.scrollY === 0) {
+				pullDistance = Math.min(delta * 0.5, PULL_MAX);
+				if (pullDistance > 8) e.preventDefault();
+			} else {
+				pullDistance = 0;
+				isPulling = false;
+			}
+		}
+
+		function onTouchEnd() {
+			if (!isPulling) return;
+			const captured = pullDistance;
+			isPulling = false;
+			pullDistance = 0;
+			if (captured >= PULL_THRESHOLD) {
+				isRefreshing = true;
+				setTimeout(() => {
+					isRefreshing = false;
+				}, 1000);
+			}
+		}
+
+		document.addEventListener('touchstart', onTouchStart, { passive: true });
+		document.addEventListener('touchmove', onTouchMove, { passive: false });
+		document.addEventListener('touchend', onTouchEnd, { passive: true });
+
+		return () => {
+			document.removeEventListener('touchstart', onTouchStart);
+			document.removeEventListener('touchmove', onTouchMove);
+			document.removeEventListener('touchend', onTouchEnd);
+		};
 	});
 
 	const activeListQuery = useQuery(api.authed.groceryLists.getActive, () =>
@@ -306,6 +364,21 @@
 		bootstrapping || (!!householdId && !activeListQuery.data && activeListQuery.data !== null)
 	);
 	const isEmpty = $derived(!isLoading && (itemsQuery.data ?? []).length === 0);
+
+	// Track whether items have ever been loaded so we don't re-focus after clearing
+	$effect(() => {
+		if ((itemsQuery.data ?? []).length > 0) {
+			hasEverHadItems = true;
+		}
+	});
+
+	// Auto-focus the quick-add input on initial empty state only
+	$effect(() => {
+		if (isEmpty && !hasEverHadItems && quickAddInputRef) {
+			const el = quickAddInputRef;
+			setTimeout(() => el.focus(), 100);
+		}
+	});
 </script>
 
 {#if !clerkContext.clerk.user}
@@ -381,13 +454,47 @@
 			</div>
 		</header>
 
+		<!-- Pull-to-refresh indicator (mobile only) -->
+		{#if pullDistance > 0 || isRefreshing}
+			<div
+				class="pointer-events-none fixed inset-x-0 top-0 z-30 flex justify-center sm:hidden"
+				style="padding-top: calc(4.5rem + env(safe-area-inset-top, 0px)); transform: translateY({isRefreshing
+					? 0
+					: pullDistance - PULL_MAX}px)"
+			>
+				<div
+					class="flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm text-muted-foreground shadow-md transition-opacity"
+					style="opacity: {isRefreshing ? 1 : Math.min(pullDistance / PULL_THRESHOLD, 1)}"
+				>
+					<div
+						class="h-4 w-4 rounded-full border-2 border-current border-t-transparent"
+						class:animate-spin={isRefreshing}
+						style="transform: rotate({isRefreshing
+							? 0
+							: Math.min((pullDistance / PULL_THRESHOLD) * 180, 180)}deg)"
+					></div>
+					<span
+						>{isRefreshing
+							? 'Refreshing\u2026'
+							: pullDistance >= PULL_THRESHOLD
+								? 'Release to refresh'
+								: 'Pull to refresh'}</span
+					>
+				</div>
+			</div>
+		{/if}
+
 		<!-- Quick-add bar -->
 		{#if householdId && activeListQuery.data}
-			<div class="sticky top-0 z-10 border-b bg-card/95 backdrop-blur" style="padding-top: env(safe-area-inset-top)">
+			<div
+				class="sticky top-0 z-10 border-b bg-card/95 backdrop-blur"
+				style="padding-top: env(safe-area-inset-top)"
+			>
 				<div class="mx-auto max-w-3xl px-4 py-3 sm:px-6">
 					<form onsubmit={handleQuickAdd} class="flex gap-2">
 						<Input
 							bind:value={quickAddName}
+							bind:ref={quickAddInputRef}
 							placeholder="Add an item…"
 							class="flex-1"
 							disabled={quickAddPending}
@@ -399,7 +506,10 @@
 			</div>
 		{/if}
 
-		<main class="mx-auto max-w-3xl px-4 py-6 sm:px-6" style="padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))">
+		<main
+			class="mx-auto max-w-3xl px-4 py-6 sm:px-6"
+			style="padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))"
+		>
 			{#if isLoading || !householdId}
 				<div class="flex items-center justify-center py-20">
 					<div class="flex items-center gap-2 text-muted-foreground">
@@ -450,10 +560,12 @@
 											<!-- Checkbox -->
 											<button
 												onclick={() => handleToggleBought(item._id)}
-												class="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center sm:min-h-0 sm:min-w-0 sm:mt-0.5"
+												class="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center sm:mt-0.5 sm:min-h-0 sm:min-w-0"
 												aria-label="Mark as bought"
 											>
-												<span class="h-5 w-5 rounded-full border-2 border-muted-foreground/40 transition-colors hover:border-primary"></span>
+												<span
+													class="h-5 w-5 rounded-full border-2 border-muted-foreground/40 transition-colors hover:border-primary"
+												></span>
 											</button>
 
 											<!-- Content -->
@@ -552,10 +664,12 @@
 									<!-- Checkbox (checked) -->
 									<button
 										onclick={() => handleToggleBought(item._id)}
-										class="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center sm:min-h-0 sm:min-w-0 sm:mt-0.5"
+										class="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center sm:mt-0.5 sm:min-h-0 sm:min-w-0"
 										aria-label="Mark as not bought"
 									>
-										<span class="flex h-5 w-5 items-center justify-center rounded-full border-2 border-primary bg-primary text-primary-foreground transition-colors hover:bg-primary/80">
+										<span
+											class="flex h-5 w-5 items-center justify-center rounded-full border-2 border-primary bg-primary text-primary-foreground transition-colors hover:bg-primary/80"
+										>
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
 												width="10"
@@ -590,7 +704,7 @@
 									<!-- Delete -->
 									<button
 										onclick={() => handleDelete(item._id)}
-										class="flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded text-muted-foreground sm:opacity-0 sm:group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive sm:min-h-0 sm:min-w-0 sm:p-1"
+										class="flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:min-h-0 sm:min-w-0 sm:p-1 sm:opacity-0 sm:group-hover:opacity-100"
 										aria-label="Delete item"
 									>
 										<svg
@@ -853,9 +967,7 @@
 						<div class="overflow-hidden rounded-md border bg-card">
 							<!-- Main row -->
 							<div class="flex items-center gap-2 px-3 py-2">
-								<span
-									class="h-3 w-3 shrink-0 rounded-full"
-									style="background-color: {cat.color}"
+								<span class="h-3 w-3 shrink-0 rounded-full" style="background-color: {cat.color}"
 								></span>
 								<span class="flex-1 truncate text-sm">{cat.name}</span>
 
@@ -864,7 +976,7 @@
 									<button
 										onclick={() => handleMoveCategory(cat._id, 'up')}
 										disabled={i === 0}
-										class="flex p-1 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+										class="flex items-center justify-center rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
 										aria-label="Move up"
 									>
 										<svg
@@ -882,7 +994,7 @@
 									<button
 										onclick={() => handleMoveCategory(cat._id, 'down')}
 										disabled={i === manageableCategories.length - 1}
-										class="flex p-1 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
+										class="flex items-center justify-center rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
 										aria-label="Move down"
 									>
 										<svg
@@ -899,7 +1011,7 @@
 									</button>
 									<button
 										onclick={() => openEditCategory(cat)}
-										class="flex p-1 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+										class="flex items-center justify-center rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
 										aria-label="Edit category"
 									>
 										<svg
@@ -920,7 +1032,7 @@
 									<button
 										onclick={() => handleDeleteCategory(cat._id)}
 										disabled={deletingCategoryId === cat._id}
-										class="flex p-1 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+										class="flex items-center justify-center rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
 										aria-label="Delete category"
 									>
 										<svg
@@ -945,12 +1057,9 @@
 								<!-- Mobile: toggle button to expand actions (hidden on desktop) -->
 								<button
 									onclick={() =>
-										(expandedCategoryId =
-											expandedCategoryId === cat._id ? null : cat._id)}
+										(expandedCategoryId = expandedCategoryId === cat._id ? null : cat._id)}
 									class="flex h-10 w-10 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground sm:hidden"
-									aria-label={expandedCategoryId === cat._id
-										? 'Hide actions'
-										: 'Show actions'}
+									aria-label={expandedCategoryId === cat._id ? 'Hide actions' : 'Show actions'}
 									aria-expanded={expandedCategoryId === cat._id}
 								>
 									<svg
@@ -964,20 +1073,18 @@
 										stroke-linecap="round"
 										stroke-linejoin="round"
 									>
-										<circle cx="12" cy="5" r="1" /><circle
+										<circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle
 											cx="12"
-											cy="12"
+											cy="19"
 											r="1"
-										/><circle cx="12" cy="19" r="1" />
+										/>
 									</svg>
 								</button>
 							</div>
 
 							<!-- Mobile expanded actions panel (hidden on desktop) -->
 							{#if expandedCategoryId === cat._id}
-								<div
-									class="flex items-center justify-around border-t px-2 py-1 sm:hidden"
-								>
+								<div class="flex items-center justify-around border-t px-2 py-1 sm:hidden">
 									<!-- Move up -->
 									<button
 										onclick={() => handleMoveCategory(cat._id, 'up')}
